@@ -40,8 +40,8 @@ import {
   LogOut,
   LoaderCircle,
 } from 'lucide-react';
-import { useUser } from '@/firebase/auth/use-user';
 import { useAuth } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const navItems = [
@@ -63,22 +63,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [user, loading, router]);
+  
+  React.useEffect(() => {
+    if (!loading && user && role && role !== 'admin') {
+      router.replace('/employee-dashboard');
+    }
+  }, [user, loading, role, router]);
 
-  if (loading || !user) {
+  if (loading || !user || (role && role !== 'admin')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
-  }
-  
-  if (role && role !== 'admin') {
-     router.replace('/employee-dashboard');
-     return (
-        <div className="flex h-screen items-center justify-center">
-          <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
-        </div>
-     );
   }
 
   return (

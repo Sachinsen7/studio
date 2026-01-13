@@ -44,7 +44,7 @@ export default function EmployeeDashboardPage() {
     );
   }
   
-  if (role && role !== 'employee') {
+  if (!loading && role && role !== 'employee') {
      router.replace('/dashboard');
      return (
         <div className="flex h-screen items-center justify-center">
@@ -83,7 +83,7 @@ export default function EmployeeDashboardPage() {
               <AvatarFallback>{user.displayName?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="grid">
-              <span className="font-semibold">{user.displayName}</span>
+              <span className="font-semibold">{currentEmployee?.name ?? user.displayName}</span>
               <span className="text-sm text-muted-foreground">{user.email}</span>
             </div>
         </div>
