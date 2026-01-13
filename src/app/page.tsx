@@ -2,11 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { LoaderCircle } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, loading, role } = useUser();
+  const auth = useAuth();
+  const { user, loading, role } = useUser(auth);
   const router = useRouter();
 
   useEffect(() => {
@@ -16,6 +18,9 @@ export default function HomePage() {
           router.replace('/dashboard');
         } else if (role === 'employee') {
           router.replace('/employee-dashboard');
+        } else {
+          // Default redirect if role is not set
+          router.replace('/login');
         }
       } else {
         router.replace('/login');

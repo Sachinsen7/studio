@@ -8,13 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { Workflow, LogIn } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 
 export default function LoginPage() {
-  const { signInWithGoogle, user, loading } = useUser();
+  const auth = useAuth();
+  const { signInWithGoogle, user, loading } = useUser(auth);
   const router = useRouter();
 
   React.useEffect(() => {

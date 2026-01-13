@@ -40,7 +40,8 @@ import {
   LogOut,
   LoaderCircle,
 } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
+import { useAuth } from '@/firebase';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const navItems = [
@@ -53,7 +54,8 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, loading, error, role, signOut } = useUser();
+  const auth = useAuth();
+  const { user, loading, error, role, signOut } = useUser(auth);
   const router = useRouter();
 
   React.useEffect(() => {

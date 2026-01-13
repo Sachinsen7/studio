@@ -18,14 +18,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export default function EmployeeDashboardPage() {
-  const { user, loading, signOut, role } = useUser();
+  const auth = useAuth();
+  const { user, loading, signOut, role } = useUser(auth);
   const router = useRouter();
 
   React.useEffect(() => {
