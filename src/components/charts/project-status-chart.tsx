@@ -1,6 +1,6 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 import {
   Card,
@@ -29,8 +29,8 @@ const chartConfig = {
 export function ProjectStatusChart({ projects }: ProjectStatusChartProps) {
   const statusColors: Record<Project['status'], string> = {
     'On Track': 'hsl(var(--chart-1))',
-    'At Risk': 'hsl(var(--destructive))',
-    Completed: 'hsl(var(--chart-3))',
+    'At Risk': 'hsl(var(--chart-3))',
+    Completed: 'hsl(var(--chart-2))',
   };
 
   const chartData = projects.map((p) => ({
@@ -39,7 +39,7 @@ export function ProjectStatusChart({ projects }: ProjectStatusChartProps) {
   }));
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>Project Progress</CardTitle>
         <CardDescription>
@@ -47,43 +47,53 @@ export function ProjectStatusChart({ projects }: ProjectStatusChartProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[250px]">
-          <BarChart
-            accessibilityLayer
-            data={chartData}
-            margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="name"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value) => value.slice(0, 3)}
-            />
-            <YAxis
-              dataKey="progress"
-              tickFormatter={(value) => `${value}%`}
-              domain={[0, 100]}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(label, payload) =>
-                    payload?.[0]?.payload.name ?? label
-                  }
-                  formatter={(value) => [`${value}%`, 'Progress']}
-                  indicator="dot"
+        <ChartContainer config={chartConfig} className="min-h-[250px] w-full h-[300px]">
+           <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                accessibilityLayer
+                data={chartData}
+                margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+                layout="vertical"
+              >
+                <CartesianGrid horizontal={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
                 />
-              }
-            />
-            <Bar dataKey="progress" radius={8}>
-              {chartData.map((entry) => (
-                <Cell key={`cell-${entry.id}`} fill={entry.fill} />
-              ))}
-            </Bar>
-          </BarChart>
+                <XAxis
+                  type="number"
+                  dataKey="progress"
+                  tickFormatter={(value) => `${value}%`}
+                  domain={[0, 100]}
+                  hide
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(label, payload) =>
+                        payload?.[0]?.payload.name ?? label
+                      }
+                      formatter={(value, name, item) => (
+                          <div className="flex items-center gap-2">
+                             <span className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: item.payload.fill}} />
+                             <span className="text-sm">{`${value}% - ${item.payload.status}`}</span>
+                          </div>
+                      )}
+                      indicator="dot"
+                    />
+                  }
+                />
+                <Bar dataKey="progress" radius={5}>
+                  {chartData.map((entry) => (
+                    <Cell key={`cell-${entry.id}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

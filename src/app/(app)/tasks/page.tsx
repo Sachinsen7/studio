@@ -1,9 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { employees, tasks, type Task } from '@/lib/data';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, GripVertical } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 
 type TaskColumnProps = {
@@ -11,17 +11,33 @@ type TaskColumnProps = {
   tasks: Task[];
 };
 
+const statusConfig = {
+    "To Do": {
+        indicator: "bg-red-500",
+        label: "To Do"
+    },
+    "In Progress": {
+        indicator: "bg-yellow-500",
+        label: "In Progress"
+    },
+    "Done": {
+        indicator: "bg-green-500",
+        label: "Done"
+    }
+}
+
 function TaskCard({ task }: { task: Task }) {
   const assignee = employees.find((e) => e.id === task.assigneeId);
   return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
-      <CardContent className="p-4">
-        <div className="flex flex-col gap-2">
+    <Card className="hover:bg-muted/50 transition-all duration-200 group">
+      <CardContent className="p-4 flex items-center gap-4">
+        <GripVertical className="h-5 w-5 text-muted-foreground/50 cursor-grab transition-colors group-hover:text-muted-foreground" />
+        <div className="flex-1 space-y-2">
           <p className="font-medium leading-snug">{task.title}</p>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-             <Badge variant="outline">{task.projectId}</Badge>
+             <Badge variant="outline" className="font-normal">{task.projectId}</Badge>
             {assignee && (
-              <Avatar className="h-6 w-6">
+              <Avatar className="h-7 w-7">
                 <AvatarImage src={assignee.avatarUrl} alt={assignee.name} />
                 <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
               </Avatar>
@@ -34,13 +50,15 @@ function TaskCard({ task }: { task: Task }) {
 }
 
 function TaskColumn({ title, tasks }: TaskColumnProps) {
+  const config = statusConfig[title];
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-headline font-semibold text-lg">{title}</h2>
-        <span className="text-muted-foreground text-sm">{tasks.length}</span>
+      <div className="flex items-center gap-3">
+        <span className={`h-2.5 w-2.5 rounded-full ${config.indicator}`} />
+        <h2 className="font-headline font-semibold tracking-wide text-lg">{config.label}</h2>
+        <span className="ml-auto text-muted-foreground text-sm font-medium bg-muted/50 h-6 w-6 flex items-center justify-center rounded-full">{tasks.length}</span>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 h-full">
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} />
         ))}

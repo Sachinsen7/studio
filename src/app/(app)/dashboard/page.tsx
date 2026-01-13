@@ -1,6 +1,7 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -9,6 +10,8 @@ import {
   Users,
   Building2,
   CheckCircle2,
+  Activity,
+  ArrowUpRight,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { projects, employees, tasks } from '@/lib/data';
@@ -23,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const totalEmployees = employees.length;
@@ -36,85 +40,87 @@ export default function DashboardPage() {
         title="Admin Dashboard"
         description="Here's a high-level overview of your company's activities."
       />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
+           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">Currently active in the system</p>
+            <div className="text-4xl font-bold">{totalEmployees}</div>
+            <p className="text-xs text-muted-foreground">+2 since last month</p>
           </CardContent>
+           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
+                <ArrowUpRight className="h-4 w-4" />
+            </Button>
         </Card>
-        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
+        <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">Across all departments</p>
+            <div className="text-4xl font-bold">{totalProjects}</div>
+            <p className="text-xs text-muted-foreground">1 project completed</p>
           </CardContent>
+           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
+                <ArrowUpRight className="h-4 w-4" />
+            </Button>
         </Card>
-        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
+        <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks In Progress</CardTitle>
-            <ListTodo className="h-4 w-4 text-muted-foreground" />
+            <ListTodo className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inProgressTasks}</div>
-            <p className="text-xs text-muted-foreground">Currently being worked on</p>
+            <div className="text-4xl font-bold">{inProgressTasks}</div>
+            <p className="text-xs text-muted-foreground">3 tasks newly assigned</p>
           </CardContent>
+           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
+                <ArrowUpRight className="h-4 w-4" />
+            </Button>
         </Card>
-        <Card className="transition-all hover:shadow-lg hover:-translate-y-1">
+        <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks Completed</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{completedTasks}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <div className="text-4xl font-bold">+{completedTasks}</div>
+            <p className="text-xs text-muted-foreground">+10 since last week</p>
           </CardContent>
+           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
+                <ArrowUpRight className="h-4 w-4" />
+            </Button>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-6">
-        <div className="lg:col-span-4">
+      <div className="grid gap-6 md:grid-cols-5 mt-6">
+        <div className="md:col-span-3">
           <ProjectStatusChart projects={projects} />
         </div>
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Recent Team Updates</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Activity />
+              Recent Team Activity
+            </CardTitle>
+            <CardDescription>An overview of recent project activities and updates from the team.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.slice(0, 5).map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={employee.avatarUrl} alt={employee.name} />
-                                <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{employee.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{employee.project}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-green-600 border-green-600/50 bg-green-50">Online</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
+          <CardContent className="space-y-4">
+             {employees.slice(1, 5).map((employee) => (
+                <div key={employee.id} className="flex items-start gap-4">
+                    <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+                        <AvatarImage src={employee.avatarUrl} alt={employee.name} />
+                        <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                            <span className="font-bold">{employee.name}</span> completed a task in <span className="text-primary">{employee.project}</span>.
+                        </p>
+                        <p className="text-xs text-muted-foreground">2 hours ago</p>
+                    </div>
+                </div>
+              ))}
           </CardContent>
         </Card>
       </div>

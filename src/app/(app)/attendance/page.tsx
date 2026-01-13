@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -19,15 +20,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { employees, leaveRequests, attendance } from '@/lib/data';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Check, X } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 import type { DayPicker } from 'react-day-picker';
 
 const statusColors: Record<string, string> = {
-  Approved: 'text-green-700 bg-green-50 border-green-200',
-  Pending: 'text-amber-700 bg-amber-50 border-amber-200',
-  Rejected: 'text-red-700 bg-red-50 border-red-200',
+  Approved: 'text-green-400 bg-green-900/20 border-green-400/20',
+  Pending: 'text-yellow-400 bg-yellow-900/20 border-yellow-400/20',
+  Rejected: 'text-red-400 bg-red-900/20 border-red-400/20',
 };
 
 export default function AttendancePage() {
@@ -42,7 +43,7 @@ export default function AttendancePage() {
   };
   
   const modifiersClassNames: DayPicker['modifiersClassNames'] = {
-    onLeave: 'bg-amber-100 text-amber-800 rounded-full',
+    onLeave: 'bg-yellow-500/20 text-yellow-300 rounded-full',
   };
 
   return (
@@ -57,8 +58,8 @@ export default function AttendancePage() {
         </Button>
       </PageHeader>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
             <Card>
                 <CardContent className="p-0">
                     <Calendar
@@ -72,19 +73,14 @@ export default function AttendancePage() {
                 </CardContent>
             </Card>
         </div>
-        <div className="md:col-span-1">
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle>Leave Requests</CardTitle>
+              <CardDescription>Review and approve leave requests from your team.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
                 <TableBody>
                   {leaveRequests.map((request) => {
                     const employee = employees.find(
@@ -93,8 +89,8 @@ export default function AttendancePage() {
                     return (
                       <TableRow key={request.id}>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
                               <AvatarImage
                                 src={employee?.avatarUrl}
                                 alt={employee?.name}
@@ -104,18 +100,30 @@ export default function AttendancePage() {
                               </AvatarFallback>
                             </Avatar>
                             <div className="grid text-sm">
-                                <span className="font-medium">{employee?.name}</span>
-                                <span className="text-muted-foreground">{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
+                                <span className="font-semibold">{employee?.name}</span>
+                                <span className="text-muted-foreground text-xs">{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <Badge
                             variant="outline"
-                            className={cn(statusColors[request.status])}
+                            className={cn("text-xs font-medium", statusColors[request.status])}
                           >
                             {request.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            {request.status === 'Pending' && (
+                                <div className='flex gap-2 justify-end'>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-500/10 hover:text-green-400">
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-500/10 hover:text-red-400">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </TableCell>
                       </TableRow>
                     );
