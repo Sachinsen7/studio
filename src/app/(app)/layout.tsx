@@ -59,36 +59,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const { user, loading, error, role, signOut } = useUser(auth);
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = React.useState(false);
 
   React.useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
-  
-  if (loading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  // If a non-admin tries to access an admin page, redirect them.
-  // But allow access to the employee dashboard
-  if (role === 'employee' && pathname !== '/employee-dashboard') {
-    router.replace('/employee-dashboard');
-     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
 
-  // If an admin is on the employee dashboard, redirect them to the admin dashboard.
-  if (role === 'admin' && pathname === '/employee-dashboard') {
-    router.replace('/dashboard');
-     return (
+  React.useEffect(() => {
+    if (loading || !role) return;
+
+    const isEmployeeOnAdminPage = role === 'employee' && pathname !== '/employee-dashboard';
+    const isAdminOnEmployeePage = role === 'admin' && pathname === '/employee-dashboard';
+
+    if (isEmployeeOnAdminPage) {
+      setIsRedirecting(true);
+      router.replace('/employee-dashboard');
+    } else if (isAdminOnEmployeePage) {
+      setIsRedirecting(true);
+      router.replace('/dashboard');
+    } else {
+      setIsRedirecting(false);
+    }
+  }, [role, pathname, loading, router]);
+  
+  if (loading || !user || isRedirecting) {
+    return (
       <div className="flex h-screen items-center justify-center bg-background">
         <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
       </div>
