@@ -69,6 +69,6 @@ export const leaveRequests: LeaveRequest[] = [
 export const attendance = [
     { date: new Date(2024, 7, 5), status: 'On Leave' },
     { date: new Date(2024, 7, 6), status: 'On Leave' },
-    { date: new new Date(2024, 7, 7), status: 'On Leave' },
+    { date: new Date(2024, 7, 7), status: 'On Leave' },
     { date: new Date(2024, 7, 12), status: 'On Leave' },
 ];
