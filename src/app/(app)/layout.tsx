@@ -41,16 +41,19 @@ import {
   LoaderCircle,
   Settings,
   LifeBuoy,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/employees', label: 'Employees', icon: Users },
   { href: '/tasks', label: 'Tasks', icon: ListTodo },
   { href: '/attendance', label: 'Attendance', icon: CalendarCheck },
+  { href: '/leaves', label: 'Leave Requests', icon: FileText },
   { href: '/summarizer', label: 'Summarizer', icon: BotMessageSquare },
 ];
 
@@ -64,8 +67,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!loading && !user) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
-  
+
+    // Redirect employees to their dashboard if they try to access admin routes
+    if (!loading && user && role === 'employee') {
+      router.replace('/employee-dashboard');
+    }
+  }, [user, loading, role, router]);
+
   if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -73,16 +81,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
-  // For employee role, only the employee dashboard is accessible.
-  // Redirect if they try to access any other page.
-  if (role === 'employee' && pathname !== '/employee-dashboard') {
-     return <div className="flex h-screen items-center justify-center bg-background"><LoaderCircle className="h-12 w-12 animate-spin text-primary" /></div>;
-  }
-  
-  // Prevent admin from accessing employee-dashboard
-  if (role === 'admin' && pathname === '/employee-dashboard') {
-     return <div className="flex h-screen items-center justify-center bg-background"><LoaderCircle className="h-12 w-12 animate-spin text-primary" /></div>;
+
+  // Show loading while redirecting employees
+  if (role === 'employee') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <LoaderCircle className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
 
@@ -106,7 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton
                   asChild
                   isActive={pathname.startsWith(item.href)}
-                  tooltip={{ children: item.label, side:'right', align:'center' }}
+                  tooltip={{ children: item.label, side: 'right', align: 'center' }}
                 >
                   <Link href={item.href}>
                     <item.icon />
@@ -121,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center w-full gap-2 p-2 rounded-md outline-none hover:bg-sidebar-accent focus-visible:ring-2 ring-sidebar-ring">
-                 <Avatar className="h-9 w-9">
+                <Avatar className="h-9 w-9">
                   <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'user'} />
                   <AvatarFallback>{user.displayName?.charAt(0) ?? user.email?.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -156,43 +162,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <header className="flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6 sticky top-0 z-30">
-          <SidebarTrigger className="md:hidden"/>
+          <SidebarTrigger className="md:hidden" />
           <div className="flex-1">
             {/* Can add breadcrumbs here */}
           </div>
+          <ThemeToggle />
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
           </Button>
           <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                      <Avatar className="h-9 w-9">
-                          <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'user'} />
-                          <AvatarFallback>{user.displayName?.charAt(0) ?? user.email?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                  </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                 <DropdownMenuItem asChild>
-                    <Link href={role === 'admin' ? "/dashboard" : "/employee-dashboard"}><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <LifeBuoy className="mr-2 h-4 w-4" />
-                  Support
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'user'} />
+                  <AvatarFallback>{user.displayName?.charAt(0) ?? user.email?.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={role === 'admin' ? "/dashboard" : "/employee-dashboard"}><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <LifeBuoy className="mr-2 h-4 w-4" />
+                Support
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
         </header>
         <main className="flex-1 p-6 overflow-auto">
