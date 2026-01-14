@@ -13,6 +13,7 @@ import {
   ArrowRight,
   LogIn
 } from 'lucide-react';
+import Logo from '../components/logo';
 
 export default function HomePage() {
   const auth = useAuth();
@@ -26,8 +27,7 @@ export default function HomePage() {
       <header className="border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Workflow className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg">CompanyFlow</span>
+            <Logo className="h-6 w-auto" />
           </div>
           <nav className="flex items-center gap-4">
             {loading ? null : user ? (
@@ -52,10 +52,10 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-24 text-center">
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl mb-6">
-          Streamline Your <span className="text-primary">Company Operations</span>
+          Streamline Your <span className="text-primary">ADRS Operations</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          CompanyFlow helps you manage employees, track tasks, monitor attendance,
+          ADRS helps you manage employees, track tasks, monitor attendance,
           and leverage AI to summarize meetings — all in one place.
         </p>
         <div className="flex gap-4 justify-center">
@@ -117,7 +117,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t py-8 mt-16">
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          © 2026 CompanyFlow. All rights reserved.
+          © 2026 ADRS. All rights reserved.
         </div>
       </footer>
     </div>

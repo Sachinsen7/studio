@@ -5,8 +5,8 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'CompanyFlow',
-  description: 'Project management for your company',
+  title: 'ADRS',
+  description: 'Project management by ADRS',
 };
 
 export default function RootLayout({

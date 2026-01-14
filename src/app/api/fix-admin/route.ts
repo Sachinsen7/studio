@@ -16,9 +16,9 @@ export async function GET() {
             '2. Select your project: studio-1745974288-26e6a',
             '3. Go to Firestore Database',
             '4. Click on "users" collection',
-            '5. Find the document for admin@company.com user',
+            '5. Find the document for admin@adrs.com user',
             '6. Click on it and change "role" field from "employee" to "admin"',
-            '7. Logout and login again with admin@company.com'
+            '7. Logout and login again with admin@adrs.com'
         ]
     });
 }

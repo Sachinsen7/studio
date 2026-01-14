@@ -45,6 +45,7 @@ import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeToggle } from '@/components/theme-toggle';
+import Logo from '../../components/logo';
 
 const employeeNavItems = [
     { href: '/employee-dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -97,7 +98,9 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
                                 <Workflow className="size-6 text-primary" />
                             </Link>
                         </Button>
-                        <span className="font-headline font-semibold text-lg">CompanyFlow</span>
+                        <div className="font-headline font-semibold text-lg">
+                            <Logo className="h-6 w-auto" />
+                        </div>
                     </div>
                 </SidebarHeader>
                 <SidebarContent>

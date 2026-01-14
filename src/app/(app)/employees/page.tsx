@@ -373,7 +373,7 @@ export default function EmployeesPage() {
             <div className="grid gap-2">
               <Label>Email</Label>
               <Input
-                placeholder="email@company.com"
+                placeholder="email@adrs.com"
                 value={newEmployee.email}
                 onChange={(e) => setNewEmployee((prev) => ({ ...prev, email: e.target.value }))}
               />
