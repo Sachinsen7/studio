@@ -12,7 +12,7 @@ export async function POST(
         const { project } = body;
 
         if (!project) {
-            return NextResponse.json({ error: 'Project is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
         }
 
         const employee = await db.employee.update({

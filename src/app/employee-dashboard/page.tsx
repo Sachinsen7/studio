@@ -1,4 +1,5 @@
 'use client';
+import * as React from 'react';
 import {
   Card,
   CardContent,
@@ -6,9 +7,8 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { ListTodo, CheckCircle2, CalendarCheck, ArrowUpRight, FolderKanban, Users, Clock } from 'lucide-react';
+import { ListTodo, CheckCircle2, CalendarCheck, ArrowUpRight, FolderKanban, Clock, LoaderCircle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { tasks, leaveRequests, employees, projects } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -23,12 +23,38 @@ import { useUser } from '@/firebase/auth/use-user';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import * as React from 'react';
+
+type Task = {
+  id: string;
+  title: string;
+  status: string;
+  projectId: string;
+  project?: { id: string; name: string };
+};
+
+type LeaveRequest = {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  status: string;
+  progress: number;
+};
 
 export default function EmployeeDashboardPage() {
   const auth = useAuth();
   const { user } = useUser(auth);
   const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [loading, setLoading] = React.useState(true);
+  const [employeeId, setEmployeeId] = React.useState<string | null>(null);
+  const [myTasks, setMyTasks] = React.useState<Task[]>([]);
+  const [myLeaveRequests, setMyLeaveRequests] = React.useState<LeaveRequest[]>([]);
+  const [myProjects, setMyProjects] = React.useState<Project[]>([]);
 
   // Update clock every second
   React.useEffect(() => {
@@ -36,37 +62,64 @@ export default function EmployeeDashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Find the current employee from mock data
-  const currentEmployee = user ? employees.find(e => e.email === user.email) : null;
+  // Fetch employee data
+  React.useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.email) return;
+      try {
+        // Get employee by email
+        const empRes = await fetch('/api/employees');
+        const employees = await empRes.json();
+        const currentEmployee = employees.find((e: { email: string }) => e.email === user.email);
 
-  const myTasks = currentEmployee
-    ? tasks.filter((t) => t.assigneeId === currentEmployee.id)
-    : [];
-  const myLeaveRequests = currentEmployee
-    ? leaveRequests.filter((lr) => lr.employeeId === currentEmployee.id)
-    : [];
+        if (currentEmployee) {
+          setEmployeeId(currentEmployee.id);
 
-  // Get employee's projects
-  const myProjects = currentEmployee
-    ? projects.filter(p => {
-        // Check if employee is assigned to this project through tasks
-        return tasks.some(t => t.projectId === p.id && t.assigneeId === currentEmployee.id);
-      })
-    : [];
+          // Fetch tasks
+          const tasksRes = await fetch(`/api/tasks?assigneeId=${currentEmployee.id}`);
+          const tasksData = await tasksRes.json();
+          setMyTasks(tasksData);
+
+          // Fetch leave requests
+          const leavesRes = await fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`);
+          const leavesData = await leavesRes.json();
+          setMyLeaveRequests(leavesData);
+
+          // Get unique projects from tasks
+          const projectIds = [...new Set(tasksData.map((t: Task) => t.projectId))];
+          const projectsRes = await fetch('/api/projects');
+          const allProjects = await projectsRes.json();
+          const employeeProjects = allProjects.filter((p: Project) => projectIds.includes(p.id));
+          setMyProjects(employeeProjects);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user?.email]);
 
   const projectCount = myProjects.length;
   const enrollmentStatus = projectCount === 0 ? 'Not Enrolled' : projectCount === 1 ? 'Single Project' : 'Multiple Projects';
 
-  const inProgressTasks = myTasks.filter(
-    (t) => t.status === 'In Progress'
-  ).length;
-  const completedTasks = myTasks.filter((t) => t.status === 'Done').length;
+  const inProgressTasks = myTasks.filter(t => t.status === 'InProgress').length;
+  const completedTasks = myTasks.filter(t => t.status === 'Done').length;
 
   const statusColors: Record<string, string> = {
     Approved: 'text-green-400 bg-green-900/20 border-green-400/20',
     Pending: 'text-yellow-400 bg-yellow-900/20 border-yellow-400/20',
     Rejected: 'text-red-400 bg-red-900/20 border-red-400/20',
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -174,15 +227,15 @@ export default function EmployeeDashboardPage() {
                         <div>
                           <CardTitle className="text-lg">{project.name}</CardTitle>
                           <CardDescription className="text-xs mt-1">
-                            {totalProjectTasks} task{totalProjectTasks !== 1 ? 's' : ''} assigned
+                            {projectTasks.length} task{projectTasks.length !== 1 ? 's' : ''} assigned
                           </CardDescription>
                         </div>
                         <Badge variant="outline" className={cn(
-                          project.status === 'On Track' && 'bg-green-900/20 text-green-400 border-green-400/20',
-                          project.status === 'At Risk' && 'bg-yellow-900/20 text-yellow-400 border-yellow-400/20',
+                          project.status === 'OnTrack' && 'bg-green-900/20 text-green-400 border-green-400/20',
+                          project.status === 'AtRisk' && 'bg-yellow-900/20 text-yellow-400 border-yellow-400/20',
                           project.status === 'Completed' && 'bg-blue-900/20 text-blue-400 border-blue-400/20'
                         )}>
-                          {project.status}
+                          {project.status === 'OnTrack' ? 'On Track' : project.status === 'AtRisk' ? 'At Risk' : 'Completed'}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -271,17 +324,17 @@ export default function EmployeeDashboardPage() {
                 {myTasks.slice(0, 5).map((task) => (
                   <TableRow key={task.id}>
                     <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>{task.projectId}</TableCell>
+                    <TableCell>{task.project?.name || 'Unknown'}</TableCell>
                     <TableCell>
                       <Badge
                         variant={task.status === 'Done' ? 'default' : 'secondary'}
                         className={cn(
-                          task.status === 'In Progress' && 'bg-yellow-900/50 text-yellow-300 border-yellow-400/20',
+                          task.status === 'InProgress' && 'bg-yellow-900/50 text-yellow-300 border-yellow-400/20',
                           task.status === 'Done' && 'bg-green-900/50 text-green-300 border-green-400/20',
-                          task.status === 'To Do' && 'bg-red-900/50 text-red-300 border-red-400/20'
+                          task.status === 'ToDo' && 'bg-red-900/50 text-red-300 border-red-400/20'
                         )}
                       >
-                        {task.status}
+                        {task.status === 'InProgress' ? 'In Progress' : task.status === 'ToDo' ? 'To Do' : 'Done'}
                       </Badge>
                     </TableCell>
                   </TableRow>

@@ -2,7 +2,6 @@
 import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Card,
@@ -19,8 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { employees, attendance } from '@/lib/data';
-import { Users, Clock, TrendingUp, CalendarCheck } from 'lucide-react';
+import { Users, Clock, TrendingUp, CalendarCheck, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 
@@ -32,26 +30,103 @@ const statusColors: Record<string, string> = {
   OnLeave: 'text-yellow-400 bg-yellow-900/20 border-yellow-400/20',
 };
 
+interface AttendanceRecord {
+  id: string;
+  employeeId: string;
+  date: string;
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  employee: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    role: string;
+    project: string;
+  };
+}
+
+interface Stats {
+  present: number;
+  late: number;
+  absent: number;
+  onLeave: number;
+  halfDay: number;
+  total: number;
+}
+
 export default function AttendancePage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  
-  const onLeaveDays = attendance
-    .filter(a => a.status === 'On Leave')
-    .map(a => a.date);
+  const [attendanceRecords, setAttendanceRecords] = React.useState<AttendanceRecord[]>([]);
+  const [stats, setStats] = React.useState<Stats>({
+    present: 0,
+    late: 0,
+    absent: 0,
+    onLeave: 0,
+    halfDay: 0,
+    total: 0,
+  });
+  const [leaveDays, setLeaveDays] = React.useState<Date[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
-  // Mock attendance data for today
-  const todayAttendance = employees.map(emp => ({
-    employee: emp,
-    status: Math.random() > 0.2 ? 'Present' : Math.random() > 0.5 ? 'Late' : 'Absent',
-    checkIn: '09:15 AM',
-    checkOut: '06:30 PM',
-  }));
+  // Fetch today's attendance
+  const fetchTodayAttendance = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/attendance?date=${today}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceRecords(data);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const stats = {
-    present: todayAttendance.filter(a => a.status === 'Present').length,
-    late: todayAttendance.filter(a => a.status === 'Late').length,
-    absent: todayAttendance.filter(a => a.status === 'Absent').length,
-    onLeave: 2,
+  // Fetch attendance stats
+  const fetchStats = React.useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/attendance/stats?date=${today}`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  }, []);
+
+  // Fetch calendar data
+  const fetchCalendarData = React.useCallback(async (month: Date) => {
+    try {
+      const monthNum = month.getMonth() + 1;
+      const year = month.getFullYear();
+      const response = await fetch(`/api/attendance/calendar?month=${monthNum}&year=${year}`);
+      if (response.ok) {
+        const data = await response.json();
+        const leaveDates = data.leaveDays.map((dateStr: string) => new Date(dateStr));
+        setLeaveDays(leaveDates);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar data:', error);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchTodayAttendance();
+    fetchStats();
+    fetchCalendarData(currentMonth);
+  }, [fetchTodayAttendance, fetchStats, fetchCalendarData, currentMonth]);
+
+  const handleMonthChange = (newMonth: Date) => {
+    setCurrentMonth(newMonth);
+    fetchCalendarData(newMonth);
   };
 
   return (
@@ -132,49 +207,59 @@ export default function AttendancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {todayAttendance.map((record) => (
-                    <TableRow key={record.employee.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage
-                              src={record.employee.avatarUrl}
-                              alt={record.employee.name}
-                            />
-                            <AvatarFallback>
-                              {record.employee.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="grid text-sm">
-                            <span className="font-semibold">{record.employee.name}</span>
-                            <span className="text-muted-foreground text-xs">{record.employee.role}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn("text-xs font-medium", statusColors[record.status as keyof typeof statusColors])}
-                        >
-                          {record.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{record.checkIn}</TableCell>
-                      <TableCell className="text-sm">{record.checkOut}</TableCell>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : attendanceRecords.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No attendance records for today
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Check In</TableHead>
+                      <TableHead>Check Out</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {attendanceRecords.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage
+                                src={record.employee.avatarUrl || undefined}
+                                alt={record.employee.name}
+                              />
+                              <AvatarFallback>
+                                {record.employee.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="grid text-sm">
+                              <span className="font-semibold">{record.employee.name}</span>
+                              <span className="text-muted-foreground text-xs">{record.employee.role}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-xs font-medium", statusColors[record.status as keyof typeof statusColors])}
+                          >
+                            {record.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{record.checkIn || '-'}</TableCell>
+                        <TableCell className="text-sm">{record.checkOut || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -182,21 +267,66 @@ export default function AttendancePage() {
           <Card>
             <CardHeader>
               <CardTitle>Calendar View</CardTitle>
-              <CardDescription>Monthly attendance overview</CardDescription>
+              <CardDescription>
+                Monthly attendance overview - Yellow dots indicate leave days
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-3">
               <Calendar
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="w-full"
+                month={currentMonth}
+                onMonthChange={handleMonthChange}
+                className="w-full rounded-md border-0"
+                classNames={{
+                  months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                  month: "space-y-4",
+                  caption: "flex justify-center pt-1 relative items-center",
+                  caption_label: "text-base font-semibold",
+                  nav: "space-x-1 flex items-center",
+                  nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-accent rounded-md transition-colors",
+                  nav_button_previous: "absolute left-1",
+                  nav_button_next: "absolute right-1",
+                  table: "w-full border-collapse space-y-1",
+                  head_row: "flex",
+                  head_cell: "text-muted-foreground rounded-md w-full font-medium text-[0.8rem]",
+                  row: "flex w-full mt-2",
+                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+                  day: "h-10 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-all",
+                  day_range_end: "day-range-end",
+                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground font-bold",
+                  day_today: "bg-accent text-accent-foreground font-bold ring-2 ring-primary ring-offset-2 ring-offset-background",
+                  day_outside: "day-outside text-muted-foreground opacity-30",
+                  day_disabled: "text-muted-foreground opacity-50",
+                  day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                  day_hidden: "invisible",
+                }}
                 modifiers={{
-                  onLeave: onLeaveDays,
+                  onLeave: leaveDays,
                 }}
                 modifiersClassNames={{
-                  onLeave: 'bg-yellow-500/20 text-yellow-300 rounded-full',
+                  onLeave: 'relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1.5 after:h-1.5 after:bg-yellow-400 after:rounded-full after:shadow-lg',
                 }}
               />
+              <div className="mt-6 space-y-3 px-2">
+                <h4 className="font-semibold text-sm mb-3">Legend</h4>
+                <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors">
+                  <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold text-sm">15</div>
+                  <span className="text-sm">Selected Date</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors">
+                  <div className="w-8 h-8 bg-accent rounded-md flex items-center justify-center font-bold text-sm ring-2 ring-primary ring-offset-2 ring-offset-background">14</div>
+                  <span className="text-sm">Today</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors">
+                  <div className="w-8 h-8 bg-background border rounded-md flex items-center justify-center text-sm relative">
+                    <span>20</span>
+                    <div className="absolute bottom-1 w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-lg"></div>
+                  </div>
+                  <span className="text-sm">Leave Day</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

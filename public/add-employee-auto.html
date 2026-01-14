@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Employee - Auto Firebase Registration</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        .container {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #1e3a8a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #60a5fa;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0a0a0a;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        button:hover:not(:disabled) {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.success {
+            background: #065f46;
+            border: 1px solid #10b981;
+            display: block;
+        }
+        .result.error {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+            display: block;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #4b5563;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        code {
+            background: #0a0a0a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+        }
+        .email-preview {
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 Add New Employee</h1>
+        <p class="subtitle">Automatically creates database record + Firebase login account</p>
+        
+        <div class="info-box">
+            <strong>✨ Auto-Registration:</strong>
+            When you create an employee, the system will automatically:
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Add employee to database</li>
+                <li>Create Firebase authentication account</li>
+                <li>Set login email as: <code>firstname@adrs.com</code></li>
+                <li>Set default password: <code>password</code></li>
+            </ul>
+        </div>
+
+        <form id="employeeForm" onsubmit="createEmployee(event)">
+            <div class="form-group">
+                <label for="name">Full Name *</label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    placeholder="e.g., Ishant Patel" 
+                    required
+                    oninput="updateEmailPreview()"
+                >
+                <div class="email-preview" id="emailPreview" style="display: none;">
+                    Login Email: <span id="previewEmail"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Personal Email *</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="e.g., ishant@gmail.com" 
+                    required
+                >
+                <small style="color: #9ca3af;">This is for company records only, not for login</small>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="e.g., 8770725632"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role *</label>
+                <select id="role" name="role" required>
+                    <option value="">Select Role</option>
+                    <option value="Developer">Developer</option>
+                    <option value="Designer">Designer</option>
+                    <option value="Manager">Manager</option>
+                    <option value="QA">QA</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="project">Project</label>
+                <input 
+                    type="text" 
+                    id="project" 
+                    name="project" 
+                    placeholder="e.g., Phoenix" 
+                    value="Unassigned"
+                >
+            </div>
+
+            <button type="submit" id="submitBtn">
+                ✨ Create Employee + Firebase Account
+            </button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVFLHijsTO33W7wE6u_Tbg-lqTdsz0DKI",
+            authDomain: "studio-1745974288-26e6a.firebaseapp.com",
+            projectId: "studio-1745974288-26e6a",
+            appId: "1:904128258790:web:e5694dffa42948e263d127",
+            messagingSenderId: "904128258790"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        window.updateEmailPreview = function() {
+            const nameInput = document.getElementById('name');
+            const emailPreview = document.getElementById('emailPreview');
+            const previewEmail = document.getElementById('previewEmail');
+            
+            if (nameInput.value.trim()) {
+                const firstName = nameInput.value.trim().split(' ')[0].toLowerCase();
+                const loginEmail = `${firstName}@adrs.com`;
+                previewEmail.textContent = loginEmail;
+                emailPreview.style.display = 'block';
+            } else {
+                emailPreview.style.display = 'none';
+            }
+        };
+
+        window.createEmployee = async function(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const result = document.getElementById('result');
+            const form = document.getElementById('employeeForm');
+            
+            // Get form data
+            const formData = new FormData(form);
+            const employeeData = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                role: formData.get('role'),
+                project: formData.get('project') || 'Unassigned',
+            };
+
+            // Generate login email
+            const firstName = employeeData.name.split(' ')[0].toLowerCase();
+            const loginEmail = `${firstName}@adrs.com`;
+            const defaultPassword = 'password';
+
+            btn.disabled = true;
+            btn.innerHTML = 'Creating Employee<span class="loading"></span>';
+            result.style.display = 'none';
+
+            try {
+                // Step 1: Create database record
+                const dbResponse = await fetch('/api/employees/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        employees: [employeeData]
+                    })
+                });
+
+                if (!dbResponse.ok) {
+                    const error = await dbResponse.json();
+                    throw new Error(error.error || 'Failed to create database record');
+                }
+
+                const dbData = await dbResponse.json();
+
+                // Step 2: Create Firebase account
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, defaultPassword);
+                    await updateProfile(userCredential.user, {
+                        displayName: employeeData.name
+                    });
+
+                    // Success!
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <strong>✅ Employee Created Successfully!</strong><br><br>
+                        <strong>Database Record:</strong> ✅ Created<br>
+                        <strong>Firebase Account:</strong> ✅ Created<br><br>
+                        <strong>Login Credentials:</strong><br>
+                        Email: <code>${loginEmail}</code><br>
+                        Password: <code>${defaultPassword}</code><br><br>
+                        <strong>Employee Details:</strong><br>
+                        Name: ${employeeData.name}<br>
+                        Role: ${employeeData.role}<br>
+                        Project: ${employeeData.project}<br><br>
+                        <small style="color: #9ca3af;">
+                            The employee can now log in at <a href="/login" style="color: #60a5fa;">/login</a>
+                        </small>
+                    `;
+
+                    // Reset form
+                    form.reset();
+                    document.getElementById('emailPreview').style.display = 'none';
+
+                } catch (firebaseError) {
+                    if (firebaseError.code === 'auth/email-already-in-use') {
+                        result.className = 'result success';
+                        result.innerHTML = `
+                            <strong>⚠️ Partially Created</strong><br><br>
+                            <strong>Database Record:</strong> ✅ Created<br>
+                            <strong>Firebase Account:</strong> ⚠️ Already exists<br><br>
+                            <strong>Login Credentials:</strong><br>
+                            Email: <code>${loginEmail}</code><br>
+                            Password: <code>${defaultPassword}</code> (if not changed)<br><br>
+                            The employee record was added to the database, but a Firebase account with this email already exists.
+                        `;
+                        form.reset();
+                        document.getElementById('emailPreview').style.display = 'none';
+                    } else {
+                        throw new Error(`Firebase error: ${firebaseError.message}`);
+                    }
+                }
+
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Error!</strong><br>
+                    ${error.message}<br><br>
+                    <small>Please try again or contact support if the issue persists.</small>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✨ Create Employee + Firebase Account';
+            }
+        };
+    </script>
+</body>
+</html>

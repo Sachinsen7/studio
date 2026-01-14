@@ -21,11 +21,11 @@ type AttendanceRecord = {
 };
 
 const statusColors = {
-    Present: 'bg-green-900/20 text-green-400 border-green-400/20',
-    Late: 'bg-orange-900/20 text-orange-400 border-orange-400/20',
-    Absent: 'bg-red-900/20 text-red-400 border-red-400/20',
-    HalfDay: 'bg-blue-900/20 text-blue-400 border-blue-400/20',
-    OnLeave: 'bg-yellow-900/20 text-yellow-400 border-yellow-400/20',
+    Present: 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30',
+    Late: 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30',
+    Absent: 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30',
+    HalfDay: 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    OnLeave: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
 };
 
 export default function MyAttendancePage() {
@@ -49,7 +49,7 @@ export default function MyAttendancePage() {
         // Simulate today's attendance
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         setTodayAttendance({
             id: '1',
             date: today,
@@ -78,10 +78,10 @@ export default function MyAttendancePage() {
         try {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour12: false });
-            
+
             // Check if late (after 9:30 AM)
             const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
-            
+
             setTodayAttendance({
                 id: '1',
                 date: new Date(),
@@ -109,7 +109,7 @@ export default function MyAttendancePage() {
         try {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour12: false });
-            
+
             setTodayAttendance(prev => prev ? {
                 ...prev,
                 checkOut: timeString,
@@ -132,14 +132,14 @@ export default function MyAttendancePage() {
 
     const calculateTotalHours = (checkIn?: string, checkOut?: string) => {
         if (!checkIn || !checkOut) return '0:00';
-        
+
         const [inH, inM] = checkIn.split(':').map(Number);
         const [outH, outM] = checkOut.split(':').map(Number);
-        
+
         const totalMinutes = (outH * 60 + outM) - (inH * 60 + inM);
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        
+
         return `${hours}:${String(minutes).padStart(2, '0')}`;
     };
 
@@ -149,7 +149,7 @@ export default function MyAttendancePage() {
         const presentDays = monthlyAttendance.filter(a => a.status === 'Present' || a.status === 'Late').length;
         const lateDays = monthlyAttendance.filter(a => a.status === 'Late').length;
         const leaveDays = monthlyAttendance.filter(a => a.status === 'OnLeave').length;
-        
+
         const totalHours = monthlyAttendance.reduce((sum, record) => {
             if (record.checkIn && record.checkOut) {
                 const hours = parseFloat(calculateTotalHours(record.checkIn, record.checkOut).replace(':', '.'));
@@ -190,16 +190,16 @@ export default function MyAttendancePage() {
                                 <div className="w-32 h-32 rounded-full border-4 border-primary/20 bg-gradient-to-br from-background to-muted flex items-center justify-center shadow-lg">
                                     <div className="text-center">
                                         <div className="text-2xl font-bold tabular-nums">
-                                            {currentTime.toLocaleTimeString('en-US', { 
-                                                hour: '2-digit', 
+                                            {currentTime.toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
                                                 minute: '2-digit',
-                                                hour12: false 
+                                                hour12: false
                                             })}
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            {currentTime.toLocaleDateString('en-US', { 
-                                                month: 'short', 
-                                                day: 'numeric' 
+                                            {currentTime.toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric'
                                             })}
                                         </div>
                                     </div>
@@ -207,11 +207,11 @@ export default function MyAttendancePage() {
                             </div>
                         </CardTitle>
                         <CardDescription>
-                            {currentTime.toLocaleDateString('en-US', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
+                            {currentTime.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
                             })}
                         </CardDescription>
                     </CardHeader>
@@ -255,8 +255,8 @@ export default function MyAttendancePage() {
                         )}
 
                         <div className="flex gap-3">
-                            <Button 
-                                onClick={handlePunchIn} 
+                            <Button
+                                onClick={handlePunchIn}
                                 disabled={loading || !!todayAttendance?.checkIn}
                                 className="flex-1"
                                 size="lg"
@@ -264,8 +264,8 @@ export default function MyAttendancePage() {
                                 <LogIn className="mr-2 h-5 w-5" />
                                 Punch In
                             </Button>
-                            <Button 
-                                onClick={handlePunchOut} 
+                            <Button
+                                onClick={handlePunchOut}
                                 disabled={loading || !todayAttendance?.checkIn || !!todayAttendance?.checkOut}
                                 variant="outline"
                                 className="flex-1"
@@ -318,126 +318,132 @@ export default function MyAttendancePage() {
                         View your attendance history with enhanced visualization
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid md:grid-cols-[1fr_300px] gap-6">
-                        <div className="space-y-4">
-                            <Calendar
-                                mode="single"
-                                selected={date}
-                                onSelect={setDate}
-                                className="rounded-md border w-full p-4"
-                                classNames={{
-                                    months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                                    month: "space-y-4 w-full",
-                                    caption: "flex justify-center pt-1 relative items-center",
-                                    caption_label: "text-lg font-semibold",
-                                    nav: "space-x-1 flex items-center",
-                                    nav_button: "h-9 w-9 bg-transparent p-0 opacity-50 hover:opacity-100",
-                                    nav_button_previous: "absolute left-1",
-                                    nav_button_next: "absolute right-1",
-                                    table: "w-full border-collapse space-y-1",
-                                    head_row: "flex",
-                                    head_cell: "text-muted-foreground rounded-md w-full font-normal text-[0.8rem]",
-                                    row: "flex w-full mt-2",
-                                    cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent",
-                                    day: "h-12 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
-                                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                    day_today: "bg-accent text-accent-foreground font-bold",
-                                    day_outside: "text-muted-foreground opacity-50",
-                                    day_disabled: "text-muted-foreground opacity-50",
-                                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                                    day_hidden: "invisible",
-                                }}
-                                modifiers={{
-                                    present: attendanceDays.present || [],
-                                    late: attendanceDays.late || [],
-                                    absent: attendanceDays.absent || [],
-                                    halfday: attendanceDays.halfday || [],
-                                    onleave: attendanceDays.onleave || [],
-                                }}
-                                modifiersClassNames={{
-                                    present: 'bg-green-500/30 text-green-300 hover:bg-green-500/40 font-semibold',
-                                    late: 'bg-orange-500/30 text-orange-300 hover:bg-orange-500/40 font-semibold',
-                                    absent: 'bg-red-500/30 text-red-300 hover:bg-red-500/40 font-semibold',
-                                    halfday: 'bg-blue-500/30 text-blue-300 hover:bg-blue-500/40 font-semibold',
-                                    onleave: 'bg-yellow-500/30 text-yellow-300 hover:bg-yellow-500/40 font-semibold',
-                                }}
-                            />
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <div className="space-y-3">
-                                <h3 className="font-semibold text-sm">Status Legend</h3>
+                <CardContent className="space-y-6">
+                    {/* Calendar - Full Width */}
+                    <div className="w-full">
+                        <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={setDate}
+                            className="rounded-lg border-2 w-full p-6 shadow-sm bg-card"
+                            classNames={{
+                                months: "w-full",
+                                month: "w-full space-y-4",
+                                caption: "flex justify-center pt-1 relative items-center mb-4",
+                                caption_label: "text-2xl font-bold",
+                                nav: "space-x-1 flex items-center",
+                                nav_button: "h-10 w-10 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-accent rounded-lg transition-all",
+                                nav_button_previous: "absolute left-1",
+                                nav_button_next: "absolute right-1",
+                                table: "w-full",
+                                head_cell: "text-muted-foreground font-bold text-sm uppercase tracking-wide",
+                                cell: "text-center p-0",
+                                day: "font-semibold text-sm aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-lg transition-all",
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground font-bold shadow-lg ring-2 ring-primary ring-offset-2",
+                                day_today: "bg-accent text-accent-foreground font-bold ring-2 ring-primary ring-offset-2 ring-offset-background",
+                                day_outside: "text-muted-foreground opacity-30",
+                                day_disabled: "text-muted-foreground opacity-50",
+                                day_hidden: "invisible",
+                            }}
+                            modifiers={{
+                                present: attendanceDays.present || [],
+                                late: attendanceDays.late || [],
+                                absent: attendanceDays.absent || [],
+                                halfday: attendanceDays.halfday || [],
+                                onleave: attendanceDays.onleave || [],
+                            }}
+                            modifiersClassNames={{
+                                present: 'bg-green-500/40 text-green-200 hover:bg-green-500/50 font-bold border-2 border-green-500/50',
+                                late: 'bg-orange-500/40 text-orange-200 hover:bg-orange-500/50 font-bold border-2 border-orange-500/50',
+                                absent: 'bg-red-500/40 text-red-200 hover:bg-red-500/50 font-bold border-2 border-red-500/50',
+                                halfday: 'bg-blue-500/40 text-blue-200 hover:bg-blue-500/50 font-bold border-2 border-blue-500/50',
+                                onleave: 'bg-yellow-500/40 text-yellow-200 hover:bg-yellow-500/50 font-bold border-2 border-yellow-500/50',
+                            }}
+                        />
+                    </div>
+
+                    {/* Legend and Selected Date Details - Below Calendar */}
+                    <div className="grid md:grid-cols-2 gap-6 pt-4 border-t">
+                        {/* Status Legend */}
+                        <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                <div className="w-1 h-6 bg-primary rounded-full"></div>
+                                Status Legend
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
                                 {Object.entries(statusColors).map(([status, color]) => (
-                                    <div key={status} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors">
-                                        <div className={cn('w-6 h-6 rounded-md', color)} />
-                                        <span className="text-sm font-medium">{status}</span>
+                                    <div key={status} className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-all cursor-pointer group">
+                                        <div className={cn('w-10 h-10 rounded-lg shadow-sm group-hover:scale-110 transition-transform', color)} />
+                                        <span className="text-sm font-semibold group-hover:text-primary transition-colors">{status}</span>
                                     </div>
                                 ))}
                             </div>
-
-                            {date && (
-                                <Card className="border-2">
-                                    <CardHeader className="pb-3">
-                                        <CardTitle className="text-base">
-                                            {date.toLocaleDateString('en-US', { 
-                                                weekday: 'long', 
-                                                month: 'long', 
-                                                day: 'numeric' 
-                                            })}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {monthlyAttendance.find(a => 
-                                            a.date.toDateString() === date.toDateString()
-                                        ) ? (
-                                            <div className="space-y-3 text-sm">
-                                                {(() => {
-                                                    const record = monthlyAttendance.find(a => 
-                                                        a.date.toDateString() === date.toDateString()
-                                                    );
-                                                    return record ? (
-                                                        <>
-                                                            <div className="flex justify-between items-center p-2 bg-muted/50 rounded">
-                                                                <span className="text-muted-foreground">Status:</span>
-                                                                <Badge variant="outline" className={cn('text-xs', statusColors[record.status])}>
-                                                                    {record.status}
-                                                                </Badge>
-                                                            </div>
-                                                            {record.checkIn && (
-                                                                <div className="flex justify-between p-2 hover:bg-muted/50 rounded transition-colors">
-                                                                    <span className="text-muted-foreground">Check In:</span>
-                                                                    <span className="font-semibold">{record.checkIn}</span>
-                                                                </div>
-                                                            )}
-                                                            {record.checkOut && (
-                                                                <div className="flex justify-between p-2 hover:bg-muted/50 rounded transition-colors">
-                                                                    <span className="text-muted-foreground">Check Out:</span>
-                                                                    <span className="font-semibold">{record.checkOut}</span>
-                                                                </div>
-                                                            )}
-                                                            {record.checkIn && record.checkOut && (
-                                                                <div className="flex justify-between p-2 bg-primary/10 rounded border border-primary/20">
-                                                                    <span className="text-muted-foreground font-medium">Total Hours:</span>
-                                                                    <span className="font-bold text-primary">
-                                                                        {calculateTotalHours(record.checkIn, record.checkOut)} hrs
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    ) : null;
-                                                })()}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <CalendarIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-2" />
-                                                <p className="text-sm text-muted-foreground">No attendance record</p>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
                         </div>
+
+                        {/* Selected Date Details */}
+                        {date && (
+                            <Card className="border-2 shadow-lg hover:shadow-xl transition-shadow">
+                                <CardHeader className="pb-3 bg-gradient-to-br from-primary/5 to-primary/10">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <CalendarIcon className="h-5 w-5 text-primary" />
+                                        {date.toLocaleDateString('en-US', {
+                                            weekday: 'long',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-4">
+                                    {monthlyAttendance.find(a =>
+                                        a.date.toDateString() === date.toDateString()
+                                    ) ? (
+                                        <div className="space-y-3 text-sm">
+                                            {(() => {
+                                                const record = monthlyAttendance.find(a =>
+                                                    a.date.toDateString() === date.toDateString()
+                                                );
+                                                return record ? (
+                                                    <>
+                                                        <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                                                            <span className="text-muted-foreground font-medium">Status:</span>
+                                                            <Badge variant="outline" className={cn('text-xs font-bold', statusColors[record.status])}>
+                                                                {record.status}
+                                                            </Badge>
+                                                        </div>
+                                                        {record.checkIn && (
+                                                            <div className="flex justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                                                                <span className="text-muted-foreground font-medium">Check In:</span>
+                                                                <span className="font-bold text-green-400">{record.checkIn}</span>
+                                                            </div>
+                                                        )}
+                                                        {record.checkOut && (
+                                                            <div className="flex justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors">
+                                                                <span className="text-muted-foreground font-medium">Check Out:</span>
+                                                                <span className="font-bold text-red-400">{record.checkOut}</span>
+                                                            </div>
+                                                        )}
+                                                        {record.checkIn && record.checkOut && (
+                                                            <div className="flex justify-between p-3 bg-primary/10 rounded-lg border-2 border-primary/30 shadow-sm">
+                                                                <span className="text-muted-foreground font-bold">Total Hours:</span>
+                                                                <span className="font-bold text-primary text-lg">
+                                                                    {calculateTotalHours(record.checkIn, record.checkOut)} hrs
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : null;
+                                            })()}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <CalendarIcon className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                                            <p className="text-sm text-muted-foreground font-medium">No attendance record</p>
+                                            <p className="text-xs text-muted-foreground/70 mt-1">Select a date with attendance data</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 </CardContent>
             </Card>

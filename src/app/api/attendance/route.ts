@@ -1,74 +1,136 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { AttendanceStatus } from '@prisma/client';
 
-// GET attendance records
+// GET attendance records with optional date filtering
 export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const employeeId = searchParams.get('employeeId');
-        const date = searchParams.get('date');
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const date = searchParams.get('date');
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
+    const employeeId = searchParams.get('employeeId');
 
-        const where: Record<string, unknown> = {};
-        if (employeeId) where.employeeId = employeeId;
-        if (date) where.date = new Date(date);
+    let whereClause: any = {};
 
-        const attendance = await db.attendance.findMany({
-            where,
-            include: { employee: true },
-            orderBy: { date: 'desc' },
-        });
-
-        return NextResponse.json(attendance);
-    } catch (error) {
-        console.error('Error fetching attendance:', error);
-        return NextResponse.json({ error: 'Failed to fetch attendance' }, { status: 500 });
+    if (employeeId) {
+      whereClause.employeeId = employeeId;
     }
+
+    if (date) {
+      // Specific date
+      const targetDate = new Date(date);
+      const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+      
+      whereClause.date = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    } else if (month && year) {
+      // Specific month
+      const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endOfMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
+      
+      whereClause.date = {
+        gte: startOfMonth,
+        lte: endOfMonth,
+      };
+    }
+
+    const attendance = await db.attendance.findMany({
+      where: whereClause,
+      include: {
+        employee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+            role: true,
+            project: true,
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    return NextResponse.json(attendance);
+  } catch (error) {
+    console.error('Error fetching attendance:', error);
+    return NextResponse.json({ error: 'Failed to fetch attendance' }, { status: 500 });
+  }
 }
 
-// POST - Mark attendance
+// POST - Create attendance record
 export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const { employeeId, date, status, checkIn, checkOut } = body;
+  try {
+    const body = await request.json();
+    const { employeeId, date, status, checkIn, checkOut } = body;
 
-        if (!employeeId || !status) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
-
-        const attendanceDate = date ? new Date(date) : new Date();
-        attendanceDate.setHours(0, 0, 0, 0);
-
-        // Check if attendance already exists for this employee on this date
-        const existing = await db.attendance.findFirst({
-            where: {
-                employeeId,
-                date: attendanceDate,
-            },
-        });
-
-        if (existing) {
-            // Update existing record
-            const updated = await db.attendance.update({
-                where: { id: existing.id },
-                data: { status, checkIn, checkOut },
-            });
-            return NextResponse.json(updated);
-        }
-
-        // Create new attendance record
-        const attendance = await db.attendance.create({
-            data: {
-                employeeId,
-                date: attendanceDate,
-                status,
-                checkIn,
-                checkOut,
-            },
-        });
-
-        return NextResponse.json(attendance, { status: 201 });
-    } catch (error) {
-        console.error('Error marking attendance:', error);
-        return NextResponse.json({ error: 'Failed to mark attendance' }, { status: 500 });
+    if (!employeeId || !date || !status) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // Check if attendance already exists for this employee and date
+    const existingAttendance = await db.attendance.findUnique({
+      where: {
+        employeeId_date: {
+          employeeId,
+          date: new Date(date),
+        },
+      },
+    });
+
+    if (existingAttendance) {
+      return NextResponse.json({ error: 'Attendance already exists for this date' }, { status: 400 });
+    }
+
+    const attendance = await db.attendance.create({
+      data: {
+        employeeId,
+        date: new Date(date),
+        status: status as AttendanceStatus,
+        checkIn,
+        checkOut,
+      },
+      include: {
+        employee: true,
+      },
+    });
+
+    return NextResponse.json(attendance, { status: 201 });
+  } catch (error) {
+    console.error('Error creating attendance:', error);
+    return NextResponse.json({ error: 'Failed to create attendance' }, { status: 500 });
+  }
+}
+
+// PUT - Update attendance record
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, status, checkIn, checkOut } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Attendance ID is required' }, { status: 400 });
+    }
+
+    const attendance = await db.attendance.update({
+      where: { id },
+      data: {
+        ...(status && { status: status as AttendanceStatus }),
+        ...(checkIn && { checkIn }),
+        ...(checkOut && { checkOut }),
+      },
+      include: {
+        employee: true,
+      },
+    });
+
+    return NextResponse.json(attendance);
+  } catch (error) {
+    console.error('Error updating attendance:', error);
+    return NextResponse.json({ error: 'Failed to update attendance' }, { status: 500 });
+  }
 }

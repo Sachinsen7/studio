@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// PATCH - Update task approval status
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -10,7 +11,7 @@ export async function PATCH(
         const body = await request.json();
         const { approvalStatus } = body;
 
-        if (!approvalStatus || !['Approved', 'Rejected'].includes(approvalStatus)) {
+        if (!approvalStatus || !['Approved', 'Rejected', 'Pending'].includes(approvalStatus)) {
             return NextResponse.json({ error: 'Invalid approval status' }, { status: 400 });
         }
 

@@ -1,3 +1,6 @@
+'use client';
+
+import * as React from 'react';
 import {
   Card,
   CardContent,
@@ -14,47 +17,91 @@ import {
   ArrowUpRight,
   FolderKanban,
   UserCheck,
+  LoaderCircle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { projects, employees, tasks } from '@/lib/data';
 import { ProjectStatusChart } from '@/components/charts/project-status-chart';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+type DashboardStats = {
+  totalEmployees: number;
+  totalProjects: number;
+  completedTasks: number;
+  inProgressTasks: number;
+  todoTasks: number;
+  onTrackProjects: number;
+  atRiskProjects: number;
+  completedProjects: number;
+  notEnrolled: number;
+  singleProject: number;
+  multipleProjects: number;
+  topContributors: Array<{
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    role: string;
+    projectCount: number;
+  }>;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  status: string;
+  progress: number;
+};
+
+type Employee = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  project: string;
+};
+
 export default function DashboardPage() {
-  const totalEmployees = employees.length;
-  const totalProjects = projects.length;
-  const completedTasks = tasks.filter(t => t.status === 'Done').length;
-  const inProgressTasks = tasks.filter(t => t.status === 'In Progress').length;
+  const [stats, setStats] = React.useState<DashboardStats | null>(null);
+  const [projects, setProjects] = React.useState<Project[]>([]);
+  const [recentEmployees, setRecentEmployees] = React.useState<Employee[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  // Project statistics
-  const onTrackProjects = projects.filter(p => p.status === 'On Track').length;
-  const atRiskProjects = projects.filter(p => p.status === 'At Risk').length;
-  const completedProjects = projects.filter(p => p.status === 'Completed').length;
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, projectsRes, employeesRes] = await Promise.all([
+          fetch('/api/dashboard/stats'),
+          fetch('/api/projects'),
+          fetch('/api/employees'),
+        ]);
 
-  // Employee enrollment statistics
-  const employeeProjectCounts = employees.map(emp => {
-    const projectCount = tasks
-      .filter(t => t.assigneeId === emp.id)
-      .map(t => t.projectId)
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .length;
-    return { ...emp, projectCount };
-  });
+        const statsData = await statsRes.json();
+        const projectsData = await projectsRes.json();
+        const employeesData = await employeesRes.json();
 
-  const notEnrolled = employeeProjectCounts.filter(e => e.projectCount === 0).length;
-  const singleProject = employeeProjectCounts.filter(e => e.projectCount === 1).length;
-  const multipleProjects = employeeProjectCounts.filter(e => e.projectCount > 1).length;
+        setStats(statsData);
+        setProjects(projectsData);
+        setRecentEmployees(employeesData.slice(1, 5));
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading || !stats) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -69,8 +116,8 @@ export default function DashboardPage() {
             <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">+2 since last month</p>
+            <div className="text-4xl font-bold">{stats.totalEmployees}</div>
+            <p className="text-xs text-muted-foreground">Active team members</p>
           </CardContent>
            <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
                 <ArrowUpRight className="h-4 w-4" />
@@ -82,8 +129,8 @@ export default function DashboardPage() {
             <Building2 className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">1 project completed</p>
+            <div className="text-4xl font-bold">{stats.totalProjects}</div>
+            <p className="text-xs text-muted-foreground">{stats.completedProjects} completed</p>
           </CardContent>
            <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
                 <ArrowUpRight className="h-4 w-4" />
@@ -95,8 +142,8 @@ export default function DashboardPage() {
             <ListTodo className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{inProgressTasks}</div>
-            <p className="text-xs text-muted-foreground">3 tasks newly assigned</p>
+            <div className="text-4xl font-bold">{stats.inProgressTasks}</div>
+            <p className="text-xs text-muted-foreground">{stats.todoTasks} pending</p>
           </CardContent>
            <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
                 <ArrowUpRight className="h-4 w-4" />
@@ -108,8 +155,8 @@ export default function DashboardPage() {
             <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">+{completedTasks}</div>
-            <p className="text-xs text-muted-foreground">+10 since last week</p>
+            <div className="text-4xl font-bold">+{stats.completedTasks}</div>
+            <p className="text-xs text-muted-foreground">Successfully finished</p>
           </CardContent>
            <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
                 <ArrowUpRight className="h-4 w-4" />
@@ -132,10 +179,10 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">On Track</p>
-                  <p className="text-xs text-muted-foreground">{Math.round((onTrackProjects / totalProjects) * 100)}% of total</p>
+                  <p className="text-xs text-muted-foreground">{stats.totalProjects > 0 ? Math.round((stats.onTrackProjects / stats.totalProjects) * 100) : 0}% of total</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold text-green-400">{onTrackProjects}</div>
+              <div className="text-2xl font-bold text-green-400">{stats.onTrackProjects}</div>
             </div>
             <div className="flex items-center justify-between p-3 bg-yellow-900/10 rounded-lg border border-yellow-900/20">
               <div className="flex items-center gap-3">
@@ -144,10 +191,10 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">At Risk</p>
-                  <p className="text-xs text-muted-foreground">{Math.round((atRiskProjects / totalProjects) * 100)}% of total</p>
+                  <p className="text-xs text-muted-foreground">{stats.totalProjects > 0 ? Math.round((stats.atRiskProjects / stats.totalProjects) * 100) : 0}% of total</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold text-yellow-400">{atRiskProjects}</div>
+              <div className="text-2xl font-bold text-yellow-400">{stats.atRiskProjects}</div>
             </div>
             <div className="flex items-center justify-between p-3 bg-blue-900/10 rounded-lg border border-blue-900/20">
               <div className="flex items-center gap-3">
@@ -156,10 +203,10 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Completed</p>
-                  <p className="text-xs text-muted-foreground">{Math.round((completedProjects / totalProjects) * 100)}% of total</p>
+                  <p className="text-xs text-muted-foreground">{stats.totalProjects > 0 ? Math.round((stats.completedProjects / stats.totalProjects) * 100) : 0}% of total</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold text-blue-400">{completedProjects}</div>
+              <div className="text-2xl font-bold text-blue-400">{stats.completedProjects}</div>
             </div>
           </CardContent>
         </Card>
@@ -180,7 +227,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">No project assigned</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold">{notEnrolled}</div>
+              <div className="text-2xl font-bold">{stats.notEnrolled}</div>
             </div>
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
@@ -192,7 +239,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">One project assigned</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold">{singleProject}</div>
+              <div className="text-2xl font-bold">{stats.singleProject}</div>
             </div>
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
@@ -204,7 +251,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">2+ projects assigned</p>
                 </div>
               </div>
-              <div className="text-2xl font-bold">{multipleProjects}</div>
+              <div className="text-2xl font-bold">{stats.multipleProjects}</div>
             </div>
           </CardContent>
         </Card>
@@ -216,30 +263,27 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {employeeProjectCounts
-                .sort((a, b) => b.projectCount - a.projectCount)
-                .slice(0, 5)
-                .map((emp) => (
-                  <div key={emp.id} className="flex items-center justify-between p-2 hover:bg-accent rounded-lg transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={emp.avatarUrl} alt={emp.name} />
-                        <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{emp.name}</p>
-                        <p className="text-xs text-muted-foreground">{emp.role}</p>
-                      </div>
+              {stats.topContributors.map((emp) => (
+                <div key={emp.id} className="flex items-center justify-between p-2 hover:bg-accent rounded-lg transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={emp.avatarUrl || undefined} alt={emp.name} />
+                      <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{emp.name}</p>
+                      <p className="text-xs text-muted-foreground">{emp.role}</p>
                     </div>
-                    <Badge variant="secondary" className={cn(
-                      emp.projectCount === 0 && 'bg-red-900/20 text-red-400',
-                      emp.projectCount === 1 && 'bg-blue-900/20 text-blue-400',
-                      emp.projectCount > 1 && 'bg-green-900/20 text-green-400'
-                    )}>
-                      {emp.projectCount} {emp.projectCount === 1 ? 'project' : 'projects'}
-                    </Badge>
                   </div>
-                ))}
+                  <Badge variant="secondary" className={cn(
+                    emp.projectCount === 0 && 'bg-red-900/20 text-red-400',
+                    emp.projectCount === 1 && 'bg-blue-900/20 text-blue-400',
+                    emp.projectCount > 1 && 'bg-green-900/20 text-green-400'
+                  )}>
+                    {emp.projectCount} {emp.projectCount === 1 ? 'project' : 'projects'}
+                  </Badge>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -247,7 +291,10 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-5 mt-6">
         <div className="md:col-span-3">
-          <ProjectStatusChart projects={projects} />
+          <ProjectStatusChart projects={projects.map(p => ({
+            ...p,
+            status: p.status === 'OnTrack' ? 'On Track' : p.status === 'AtRisk' ? 'At Risk' : 'Completed'
+          }))} />
         </div>
         <Card className="md:col-span-2">
           <CardHeader>
@@ -258,10 +305,10 @@ export default function DashboardPage() {
             <CardDescription>An overview of recent project activities and updates from the team.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-             {employees.slice(1, 5).map((employee) => (
+             {recentEmployees.map((employee) => (
                 <div key={employee.id} className="flex items-start gap-4">
                     <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
-                        <AvatarImage src={employee.avatarUrl} alt={employee.name} />
+                        <AvatarImage src={employee.avatarUrl || undefined} alt={employee.name} />
                         <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">

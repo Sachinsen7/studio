@@ -134,9 +134,24 @@ export default function EmployeesPage() {
         body: JSON.stringify(newEmployee),
       });
       if (!res.ok) throw new Error('Failed to add employee');
-      const employee = await res.json();
-      setEmployees((prev) => [employee, ...prev]);
-      toast({ title: 'Success', description: `${employee.name} has been added` });
+      const data = await res.json();
+      
+      setEmployees((prev) => [data.employee, ...prev]);
+      
+      // Show success message with Firebase credentials
+      if (data.firebase?.created) {
+        toast({ 
+          title: 'Success', 
+          description: `${data.employee.name} has been added! Firebase account created with email: ${data.firebase.email} and password: ${data.firebase.password}`,
+          duration: 10000, // Show for 10 seconds so user can read credentials
+        });
+      } else {
+        toast({ 
+          title: 'Success', 
+          description: `${data.employee.name} has been added (Firebase account already exists)`,
+        });
+      }
+      
       setAddDialogOpen(false);
       setNewEmployee({ name: '', email: '', role: 'Developer', project: '', avatarUrl: '' });
     } catch (error) {

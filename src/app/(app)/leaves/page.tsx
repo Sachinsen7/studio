@@ -29,10 +29,9 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { employees, leaveRequests as initialLeaveRequests, type LeaveRequest } from '@/lib/data';
 import { PageHeader } from '@/components/page-header';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, MessageSquare, LoaderCircle } from 'lucide-react';
 
 const statusConfig = {
     Pending: { color: 'bg-yellow-900/20 text-yellow-400 border-yellow-400/20', icon: Clock },
@@ -40,54 +39,104 @@ const statusConfig = {
     Rejected: { color: 'bg-red-900/20 text-red-400 border-red-400/20', icon: XCircle },
 };
 
-type ExtendedLeaveRequest = LeaveRequest & {
+type LeaveRequest = {
+    id: string;
+    employeeId: string;
+    startDate: string;
+    endDate: string;
+    leaveType: string;
+    leaveDuration: string;
+    reason?: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
     adminComment?: string;
+    employee: {
+        id: string;
+        name: string;
+        email: string;
+        avatarUrl: string | null;
+        role: string;
+    };
 };
 
 export default function LeavesPage() {
-    const [leaveRequests, setLeaveRequests] = React.useState<ExtendedLeaveRequest[]>(initialLeaveRequests);
+    const [leaveRequests, setLeaveRequests] = React.useState<LeaveRequest[]>([]);
+    const [loading, setLoading] = React.useState(true);
     const [filterStatus, setFilterStatus] = React.useState<string>('all');
-    const [selectedRequest, setSelectedRequest] = React.useState<ExtendedLeaveRequest | null>(null);
+    const [selectedRequest, setSelectedRequest] = React.useState<LeaveRequest | null>(null);
     const [dialogOpen, setDialogOpen] = React.useState(false);
     const [actionType, setActionType] = React.useState<'approve' | 'reject'>('approve');
     const [comment, setComment] = React.useState('');
+    const [processing, setProcessing] = React.useState(false);
     const { toast } = useToast();
+
+    React.useEffect(() => {
+        fetchLeaveRequests();
+    }, []);
+
+    const fetchLeaveRequests = async () => {
+        try {
+            const res = await fetch('/api/leave-requests');
+            const data = await res.json();
+            setLeaveRequests(data);
+        } catch (error) {
+            console.error('Error fetching leave requests:', error);
+            toast({ title: 'Error', description: 'Failed to load leave requests', variant: 'destructive' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredRequests = leaveRequests.filter(
         (req) => filterStatus === 'all' || req.status === filterStatus
     );
 
-    const openDialog = (request: ExtendedLeaveRequest, action: 'approve' | 'reject') => {
+    const openDialog = (request: LeaveRequest, action: 'approve' | 'reject') => {
         setSelectedRequest(request);
         setActionType(action);
         setComment('');
         setDialogOpen(true);
     };
 
-    const handleStatusChange = () => {
+    const handleStatusChange = async () => {
         if (!selectedRequest) return;
 
         const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+        setProcessing(true);
         
-        setLeaveRequests((prev) =>
-            prev.map((req) => 
-                req.id === selectedRequest.id 
-                    ? { ...req, status: newStatus, adminComment: comment || undefined } 
-                    : req
-            )
-        );
-        
-        toast({
-            title: `Leave Request ${newStatus}`,
-            description: `The leave request has been ${newStatus.toLowerCase()}.`,
-        });
+        try {
+            const res = await fetch(`/api/leave-requests/${selectedRequest.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus, adminComment: comment || undefined }),
+            });
 
-        setDialogOpen(false);
-        setSelectedRequest(null);
-        setComment('');
+            if (!res.ok) throw new Error('Failed to update');
+
+            const updated = await res.json();
+            setLeaveRequests((prev) => prev.map((req) => req.id === updated.id ? updated : req));
+            
+            toast({
+                title: `Leave Request ${newStatus}`,
+                description: `The leave request has been ${newStatus.toLowerCase()}.`,
+            });
+
+            setDialogOpen(false);
+            setSelectedRequest(null);
+            setComment('');
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to update leave request', variant: 'destructive' });
+        } finally {
+            setProcessing(false);
+        }
     };
 
-    const getEmployee = (employeeId: string) => employees.find((e) => e.id === employeeId);
+    if (loading) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <>
@@ -178,7 +227,6 @@ export default function LeavesPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredRequests.map((request) => {
-                                const employee = getEmployee(request.employeeId);
                                 const startDate = new Date(request.startDate);
                                 const endDate = new Date(request.endDate);
                                 const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -189,24 +237,24 @@ export default function LeavesPage() {
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={employee?.avatarUrl} alt={employee?.name} />
-                                                    <AvatarFallback>{employee?.name?.charAt(0)}</AvatarFallback>
+                                                    <AvatarImage src={request.employee.avatarUrl || undefined} alt={request.employee.name} />
+                                                    <AvatarFallback>{request.employee.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <p className="font-medium">{employee?.name}</p>
-                                                    <p className="text-sm text-muted-foreground">{employee?.role}</p>
+                                                    <p className="font-medium">{request.employee.name}</p>
+                                                    <p className="text-sm text-muted-foreground">{request.employee.role}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">Casual</Badge>
+                                            <Badge variant="outline">{request.leaveType}</Badge>
                                         </TableCell>
                                         <TableCell>{startDate.toLocaleDateString()}</TableCell>
                                         <TableCell>{endDate.toLocaleDateString()}</TableCell>
                                         <TableCell>{duration} day{duration > 1 ? 's' : ''}</TableCell>
                                         <TableCell className="max-w-[200px]">
                                             <p className="text-sm text-muted-foreground truncate">
-                                                Personal reasons
+                                                {request.reason || 'No reason provided'}
                                             </p>
                                         </TableCell>
                                         <TableCell>
@@ -263,7 +311,6 @@ export default function LeavesPage() {
                 </CardContent>
             </Card>
 
-            {/* Approval/Rejection Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -273,7 +320,7 @@ export default function LeavesPage() {
                         <DialogDescription>
                             {selectedRequest && (
                                 <>
-                                    Leave request from {getEmployee(selectedRequest.employeeId)?.name} for{' '}
+                                    Leave request from {selectedRequest.employee.name} for{' '}
                                     {new Date(selectedRequest.startDate).toLocaleDateString()} to{' '}
                                     {new Date(selectedRequest.endDate).toLocaleDateString()}
                                 </>
@@ -292,13 +339,15 @@ export default function LeavesPage() {
                             />
                         </div>
                         <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={processing}>
                                 Cancel
                             </Button>
                             <Button
                                 onClick={handleStatusChange}
+                                disabled={processing}
                                 className={actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                             >
+                                {processing ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : null}
                                 {actionType === 'approve' ? 'Approve' : 'Reject'}
                             </Button>
                         </div>

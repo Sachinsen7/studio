@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// PATCH - Update leave request (approve/reject)
+// PATCH - Update leave request status
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const body = await request.json();
         const { status, adminComment } = body;
 
@@ -15,11 +16,10 @@ export async function PATCH(
         }
 
         const leaveRequest = await db.leaveRequest.update({
-            where: { id: params.id },
-            data: {
+            where: { id },
+            data: { 
                 status,
-                adminComment,
-                updatedAt: new Date(),
+                ...(adminComment && { adminComment }),
             },
             include: { employee: true },
         });
@@ -28,22 +28,5 @@ export async function PATCH(
     } catch (error) {
         console.error('Error updating leave request:', error);
         return NextResponse.json({ error: 'Failed to update leave request' }, { status: 500 });
-    }
-}
-
-// DELETE - Delete leave request
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        await db.leaveRequest.delete({
-            where: { id: params.id },
-        });
-
-        return NextResponse.json({ message: 'Leave request deleted' });
-    } catch (error) {
-        console.error('Error deleting leave request:', error);
-        return NextResponse.json({ error: 'Failed to delete leave request' }, { status: 500 });
     }
 }
