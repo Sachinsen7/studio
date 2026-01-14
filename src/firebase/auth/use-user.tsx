@@ -41,7 +41,7 @@ export function useUser(auth: Auth): UserAuthHookResult {
       const userDoc = await getDoc(userDocRef);
 
       // Admin emails list
-      const adminEmails = ['admin@company.com', 'superadmin@company.com'];
+      const adminEmails = ['admin@adrs.com', 'superadmin@adrs.com'];
       const shouldBeAdmin = email ? adminEmails.includes(email) : false;
 
       if (userDoc.exists()) {

@@ -60,7 +60,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Admin Dashboard"
-        description="Here's a high-level overview of your company's activities."
+        description="Here's a high-level overview of ADRS activities."
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">

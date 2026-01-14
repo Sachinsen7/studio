@@ -49,6 +49,7 @@ import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeToggle } from '@/components/theme-toggle';
+import Logo from '../../components/logo';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -101,14 +102,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
-            <Button variant="ghost" size="icon" className="shrink-0" asChild>
-              <Link href="/">
-                <Workflow className="size-6 text-primary" />
-              </Link>
-            </Button>
-            <span className="font-headline font-semibold text-lg">CompanyFlow</span>
+           
+            <div className="font-headline font-semibold text-lg">
+              <Logo className=" h-12 w-auto" />
+            </div>
           </div>
-        </SidebarHeader>
+        </SidebarHeader>  
         <SidebarContent>
           <SidebarMenu>
             {navItems.map((item) => (

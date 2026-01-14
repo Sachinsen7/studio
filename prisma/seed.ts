@@ -39,15 +39,15 @@ async function main() {
 
     // Create Employees
     const employees = [
-        { name: 'Admin User', email: 'admin@company.com', role: 'Admin' as const, project: 'All' },
-        { name: 'Sachin', email: 'sachin@company.com', role: 'Developer' as const, project: 'Phoenix' },
-        { name: 'Srajal', email: 'srajal@company.com', role: 'Designer' as const, project: 'Odyssey' },
-        { name: 'Sakshi', email: 'sakshi@company.com', role: 'Manager' as const, project: 'Vanguard' },
-        { name: 'Sapeksh', email: 'sapeksh@company.com', role: 'QA' as const, project: 'Phoenix' },
-        { name: 'Sparsh', email: 'sparsh@company.com', role: 'Developer' as const, project: 'Odyssey' },
-        { name: 'Danish', email: 'danish@company.com', role: 'Developer' as const, project: 'Vanguard' },
-        { name: 'Sneha', email: 'sneha@company.com', role: 'Designer' as const, project: 'Phoenix' },
-        { name: 'Ishant', email: 'ishant@company.com', role: 'QA' as const, project: 'Odyssey' },
+        { name: 'Admin User', email: 'admin@adrs.com', role: 'Admin' as const, project: 'All' },
+        { name: 'Sachin', email: 'sachin@adrs.com', role: 'Developer' as const, project: 'Phoenix' },
+        { name: 'Srajal', email: 'srajal@adrs.com', role: 'Designer' as const, project: 'Odyssey' },
+        { name: 'Sakshi', email: 'sakshi@adrs.com', role: 'Manager' as const, project: 'Vanguard' },
+        { name: 'Sapeksh', email: 'sapeksh@adrs.com', role: 'QA' as const, project: 'Phoenix' },
+        { name: 'Sparsh', email: 'sparsh@adrs.com', role: 'Developer' as const, project: 'Odyssey' },
+        { name: 'Danish', email: 'danish@adrs.com', role: 'Developer' as const, project: 'Vanguard' },
+        { name: 'Sneha', email: 'sneha@adrs.com', role: 'Designer' as const, project: 'Phoenix' },
+        { name: 'Ishant', email: 'ishant@adrs.com', role: 'QA' as const, project: 'Odyssey' },
     ];
 
     for (const emp of employees) {

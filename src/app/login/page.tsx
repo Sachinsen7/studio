@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { Workflow, LogIn, Mail, Lock } from 'lucide-react';
+import Logo from '../../components/logo';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
@@ -108,8 +109,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-8 left-8 flex items-center gap-2 text-lg font-semibold">
-        <Workflow className="h-6 w-6 text-primary" />
-        <span>CompanyFlow</span>
+        <Logo className="h-6 w-auto" />
       </div>
       <div className="absolute top-8 right-8">
         <ThemeToggle />
