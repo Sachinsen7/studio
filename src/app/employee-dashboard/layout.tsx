@@ -45,12 +45,13 @@ import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationsPanel } from '@/components/notifications-panel';
 
 const employeeNavItems = [
     { href: '/employee-dashboard', label: 'Dashboard', icon: LayoutGrid },
     { href: '/employee-dashboard/tasks', label: 'My Tasks', icon: ListTodo },
-    { href: '/employee-dashboard/attendance', label: 'My Attendance', icon: CalendarCheck },
-    { href: '/employee-dashboard/leave', label: 'Leave Requests', icon: FileText },
+    { href: '/employee-dashboard/my-attendance', label: 'My Attendance', icon: CalendarCheck },
+    { href: '/employee-dashboard/my-leaves', label: 'My Leaves', icon: FileText },
 ];
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
@@ -160,10 +161,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
                     <SidebarTrigger className="md:hidden" />
                     <div className="flex-1" />
                     <ThemeToggle />
-                    <Button variant="ghost" size="icon">
-                        <Bell className="h-5 w-5" />
-                        <span className="sr-only">Notifications</span>
-                    </Button>
+                    <NotificationsPanel />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
