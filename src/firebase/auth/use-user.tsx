@@ -31,20 +31,33 @@ export function useUser(auth: Auth): UserAuthHookResult {
   const [error, setError] = useState<Error | null>(null);
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const context = useContext(FirebaseContext);
-  
+
   const firestore = context?.firestore ?? null;
 
-  const fetchUserRole = useCallback(async (uid: string) => {
+  const fetchUserRole = useCallback(async (uid: string, email?: string | null) => {
     if (!firestore) return;
     try {
       const userDocRef = doc(firestore, 'users', uid);
       const userDoc = await getDoc(userDocRef);
+
+      // Admin emails list
+      const adminEmails = ['admin@company.com', 'superadmin@company.com'];
+      const shouldBeAdmin = email ? adminEmails.includes(email) : false;
+
       if (userDoc.exists()) {
-        setRole(userDoc.data().role);
+        const currentRole = userDoc.data().role;
+        // Auto-fix: if email should be admin but role is wrong, fix it
+        if (shouldBeAdmin && currentRole !== 'admin') {
+          await setDoc(userDocRef, { role: 'admin', email: email }, { merge: true });
+          setRole('admin');
+        } else {
+          setRole(currentRole);
+        }
       } else {
-        // Default new sign-ups to employee
-        await setDoc(userDocRef, { role: 'employee' });
-        setRole('employee'); 
+        // New user - set role based on email
+        const userRole = shouldBeAdmin ? 'admin' : 'employee';
+        await setDoc(userDocRef, { role: userRole, email: email });
+        setRole(userRole);
       }
     } catch (e) {
       setError(e as Error);
@@ -59,7 +72,7 @@ export function useUser(auth: Auth): UserAuthHookResult {
         setLoading(true);
         if (firebaseUser) {
           setUser(firebaseUser);
-          await fetchUserRole(firebaseUser.uid);
+          await fetchUserRole(firebaseUser.uid, firebaseUser.email);
         } else {
           setUser(null);
           setRole(null);
@@ -87,7 +100,7 @@ export function useUser(auth: Auth): UserAuthHookResult {
     }
   }, [auth]);
 
-  const signInWithEmail = useCallback(async (email:string, password:string) => {
+  const signInWithEmail = useCallback(async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -99,7 +112,7 @@ export function useUser(auth: Auth): UserAuthHookResult {
     }
   }, [auth]);
 
-  const signUpWithEmail = useCallback(async (email:string, password:string) => {
+  const signUpWithEmail = useCallback(async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {

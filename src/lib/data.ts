@@ -31,9 +31,32 @@ export type LeaveRequest = {
   status: 'Pending' | 'Approved' | 'Rejected';
 };
 
-// You can use these credentials to log in and test the different roles.
-// Admin: admin@company.com / password
-// Employees: e.g., sachin@company.com / password
+/**
+ * ============================================
+ * LOGIN CREDENTIALS (All passwords: "password")
+ * ============================================
+ * 
+ * ADMIN:
+ * - admin@company.com / password (Role: Admin, Access: All)
+ * 
+ * DEVELOPERS:
+ * - sachin@company.com / password (Project: Phoenix)
+ * - sparsh@company.com / password (Project: Odyssey)
+ * - danish@company.com / password (Project: Vanguard)
+ * 
+ * DESIGNERS:
+ * - srajal@company.com / password (Project: Odyssey)
+ * - sneha@company.com / password (Project: Phoenix)
+ * 
+ * MANAGER:
+ * - sakshi@company.com / password (Project: Vanguard)
+ * 
+ * QA:
+ * - sapeksh@company.com / password (Project: Phoenix)
+ * - ishant@company.com / password (Project: Odyssey)
+ * 
+ * ============================================
+ */
 export const employees: Employee[] = [
   { id: 'adm-1', name: 'Admin User', avatarUrl: 'https://picsum.photos/seed/admin/100/100', email: 'admin@company.com', role: 'Admin', project: 'All', enrollmentDate: '2020-01-01' },
   { id: 'emp-1', name: 'Sachin', avatarUrl: 'https://picsum.photos/seed/sachin/100/100', email: 'sachin@company.com', role: 'Developer', project: 'Phoenix', enrollmentDate: '2022-01-15' },
@@ -71,8 +94,8 @@ export const leaveRequests: LeaveRequest[] = [
 ];
 
 export const attendance = [
-    { date: new Date(2024, 7, 5), status: 'On Leave' },
-    { date: new Date(2024, 7, 6), status: 'On Leave' },
-    { date: new Date(2024, 7, 7), status: 'On Leave' },
-    { date: new Date(2024, 7, 12), status: 'On Leave' },
+  { date: new Date(2024, 7, 5), status: 'On Leave' },
+  { date: new Date(2024, 7, 6), status: 'On Leave' },
+  { date: new Date(2024, 7, 7), status: 'On Leave' },
+  { date: new Date(2024, 7, 12), status: 'On Leave' },
 ];
