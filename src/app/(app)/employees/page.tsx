@@ -341,6 +341,9 @@ export default function EmployeesPage() {
                         <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setDetailsDialogOpen(true); }}>
                           <FileText className="mr-2 h-4 w-4" />View Details
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.location.href = `/employees/${employee.id}/leave-quota`}>
+                          <Users className="mr-2 h-4 w-4" />Manage Leave Quotas
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-red-500" onClick={() => handleDeleteEmployee(employee)}>
                           <Trash2 className="mr-2 h-4 w-4" />Delete
