@@ -28,8 +28,11 @@ export async function GET(request: NextRequest) {
 // POST - Create leave request
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { employeeId, startDate, endDate, leaveType, reason } = body;
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
+        const { employeeId, startDate, endDate, leaveType, leaveDuration, reason } = body;
 
         if (!employeeId || !startDate || !endDate) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -40,7 +43,8 @@ export async function POST(request: NextRequest) {
                 employeeId,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                leaveType: leaveType || 'Casual',
+                leaveType: leaveType || 'CasualLeave',
+                leaveDuration: leaveDuration || 'FullDay',
                 reason,
                 status: 'Pending',
             },

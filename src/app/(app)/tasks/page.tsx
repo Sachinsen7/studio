@@ -214,12 +214,15 @@ export default function TasksPage() {
       const employeesData = await employeesRes.json();
       const projectsData = await projectsRes.json();
       
-      setTasks(tasksData);
-      setEmployees(employeesData);
-      setProjects(projectsData);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Error', description: 'Failed to load tasks', variant: 'destructive' });
+      setTasks([]);
+      setEmployees([]);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -245,7 +248,7 @@ export default function TasksPage() {
       if (!res.ok) throw new Error('Failed to create task');
       
       const createdTask = await res.json();
-      setTasks([createdTask, ...tasks]);
+      setTasks([createdTask, ...(Array.isArray(tasks) ? tasks : [])]);
       setCreateDialogOpen(false);
       setNewTask({
         title: '',
@@ -289,12 +292,12 @@ export default function TasksPage() {
   };
 
   // Filter tasks
-  const filteredTasks = tasks.filter((task) => {
-    if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (statusFilter !== 'all' && task.status !== statusFilter) return false;
-    if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter((task) => {
+    if (searchQuery && !task?.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (statusFilter !== 'all' && task?.status !== statusFilter) return false;
+    if (priorityFilter !== 'all' && task?.priority !== priorityFilter) return false;
     
-    if (dueDateFilter !== 'all' && task.dueDate) {
+    if (dueDateFilter !== 'all' && task?.dueDate) {
       const dueDate = new Date(task.dueDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -309,11 +312,11 @@ export default function TasksPage() {
     }
     
     return true;
-  });
+  }) : [];
 
-  const todoTasks = filteredTasks.filter((t) => t.status === 'ToDo');
-  const inProgressTasks = filteredTasks.filter((t) => t.status === 'InProgress');
-  const doneTasks = filteredTasks.filter((t) => t.status === 'Done');
+  const todoTasks = filteredTasks.filter((t) => t?.status === 'ToDo');
+  const inProgressTasks = filteredTasks.filter((t) => t?.status === 'InProgress');
+  const doneTasks = filteredTasks.filter((t) => t?.status === 'Done');
 
   if (loading) {
     return (
@@ -408,38 +411,44 @@ export default function TasksPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTasks.map((task) => {
-                const priorityConf = priorityConfig[task.priority];
-                const statusConf = statusConfig[task.status];
+              {Array.isArray(filteredTasks) && filteredTasks.length > 0 ? filteredTasks.map((task) => {
+                const priorityConf = priorityConfig[task?.priority || 'Medium'];
+                const statusConf = statusConfig[task?.status || 'ToDo'];
                 return (
-                  <TableRow key={task.id} className="cursor-pointer" onClick={() => setSelectedTask(task)}>
-                    <TableCell className="font-medium">{task.title}</TableCell>
+                  <TableRow key={task?.id} className="cursor-pointer" onClick={() => setSelectedTask(task)}>
+                    <TableCell className="font-medium">{task?.title || 'Untitled'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn('text-xs', priorityConf.color)}>
-                        {task.priority}
+                      <Badge variant="outline" className={cn('text-xs', priorityConf?.color)}>
+                        {task?.priority || 'Medium'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {task.dueDate ? format(new Date(task.dueDate), 'MMM dd, yyyy') : '-'}
+                      {task?.dueDate ? format(new Date(task.dueDate), 'MMM dd, yyyy') : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn('text-xs', statusConf.textColor)}>
-                        {statusConf.label}
+                      <Badge variant="outline" className={cn('text-xs', statusConf?.textColor)}>
+                        {statusConf?.label || 'To Do'}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarImage src={task.assignee?.avatarUrl} />
-                          <AvatarFallback>{task.assignee?.name.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={task?.assignee?.avatarUrl} />
+                          <AvatarFallback>{task?.assignee?.name?.charAt(0) || '?'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm">{task.assignee?.name}</span>
+                        <span className="text-sm">{task?.assignee?.name || 'Unassigned'}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{task.project?.name}</TableCell>
+                    <TableCell>{task?.project?.name || 'No Project'}</TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No tasks found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </Card>
@@ -523,11 +532,13 @@ export default function TasksPage() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
+                    {Array.isArray(employees) && employees.length > 0 ? employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {emp.name}
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="no-employees" disabled>No employees available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -539,11 +550,13 @@ export default function TasksPage() {
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.map((proj) => (
+                  {Array.isArray(projects) && projects.length > 0 ? projects.map((proj) => (
                     <SelectItem key={proj.id} value={proj.id}>
                       {proj.name}
                     </SelectItem>
-                  ))}
+                  )) : (
+                    <SelectItem value="no-projects" disabled>No projects available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

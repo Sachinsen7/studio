@@ -65,7 +65,10 @@ export async function GET(request: NextRequest) {
 // POST - Create attendance record
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Buffer the request body
+    const buffer = await request.arrayBuffer();
+    const body = JSON.parse(new TextDecoder().decode(buffer));
+    
     const { employeeId, date, status, checkIn, checkOut } = body;
 
     if (!employeeId || !date || !status) {
@@ -109,7 +112,10 @@ export async function POST(request: NextRequest) {
 // PUT - Update attendance record
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Buffer the request body
+    const buffer = await request.arrayBuffer();
+    const body = JSON.parse(new TextDecoder().decode(buffer));
+    
     const { id, status, checkIn, checkOut } = body;
 
     if (!id) {

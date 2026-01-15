@@ -79,10 +79,13 @@ export default function AttendancePage() {
       const response = await fetch(`/api/attendance?date=${today}`);
       if (response.ok) {
         const data = await response.json();
-        setAttendanceRecords(data);
+        setAttendanceRecords(Array.isArray(data) ? data : []);
+      } else {
+        setAttendanceRecords([]);
       }
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setAttendanceRecords([]);
     } finally {
       setLoading(false);
     }
@@ -110,11 +113,14 @@ export default function AttendancePage() {
       const response = await fetch(`/api/attendance/calendar?month=${monthNum}&year=${year}`);
       if (response.ok) {
         const data = await response.json();
-        const leaveDates = data.leaveDays.map((dateStr: string) => new Date(dateStr));
+        const leaveDates = Array.isArray(data?.leaveDays) ? data.leaveDays.map((dateStr: string) => new Date(dateStr)) : [];
         setLeaveDays(leaveDates);
+      } else {
+        setLeaveDays([]);
       }
     } catch (error) {
       console.error('Error fetching calendar data:', error);
+      setLeaveDays([]);
     }
   }, []);
 
@@ -226,37 +232,43 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendanceRecords.map((record) => (
-                      <TableRow key={record.id}>
+                    {Array.isArray(attendanceRecords) && attendanceRecords.length > 0 ? attendanceRecords.map((record) => (
+                      <TableRow key={record?.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9">
                               <AvatarImage
-                                src={record.employee.avatarUrl || undefined}
-                                alt={record.employee.name}
+                                src={record?.employee?.avatarUrl || undefined}
+                                alt={record?.employee?.name || 'Employee'}
                               />
                               <AvatarFallback>
-                                {record.employee.name.charAt(0)}
+                                {record?.employee?.name?.charAt(0) || '?'}
                               </AvatarFallback>
                             </Avatar>
                             <div className="grid text-sm">
-                              <span className="font-semibold">{record.employee.name}</span>
-                              <span className="text-muted-foreground text-xs">{record.employee.role}</span>
+                              <span className="font-semibold">{record?.employee?.name || 'Unknown'}</span>
+                              <span className="text-muted-foreground text-xs">{record?.employee?.role || ''}</span>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={cn("text-xs font-medium", statusColors[record.status as keyof typeof statusColors])}
+                            className={cn("text-xs font-medium", statusColors[record?.status as keyof typeof statusColors] || statusColors.Absent)}
                           >
-                            {record.status}
+                            {record?.status || 'Unknown'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{record.checkIn || '-'}</TableCell>
-                        <TableCell className="text-sm">{record.checkOut || '-'}</TableCell>
+                        <TableCell className="text-sm">{record?.checkIn || '-'}</TableCell>
+                        <TableCell className="text-sm">{record?.checkOut || '-'}</TableCell>
                       </TableRow>
-                    ))}
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          No attendance records for today
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               )}

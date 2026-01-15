@@ -99,21 +99,34 @@ export default function MyLeavesPage() {
             try {
                 // Get employee by email
                 const empRes = await fetch('/api/employees');
+                if (!empRes.ok) throw new Error('Failed to fetch employees');
+                
                 const employees = await empRes.json();
-                const currentEmployee = employees.find((e: { email: string }) => e.email === user.email);
+                if (!Array.isArray(employees)) {
+                    console.error('Invalid employees data');
+                    return;
+                }
+                
+                const currentEmployee = employees.find((e: { email: string }) => e?.email === user.email);
 
-                if (currentEmployee) {
+                if (currentEmployee?.id) {
                     setEmployeeId(currentEmployee.id);
 
                     // Fetch leave requests
                     const leavesRes = await fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`);
-                    const leavesData = await leavesRes.json();
-                    setLeaveRequests(leavesData);
+                    if (leavesRes.ok) {
+                        const leavesData = await leavesRes.json();
+                        setLeaveRequests(Array.isArray(leavesData) ? leavesData : []);
+                    }
 
                     // Fetch leave quotas
                     const quotasRes = await fetch(`/api/employees/${currentEmployee.id}/leave-quota`);
-                    const quotasData = await quotasRes.json();
-                    setLeaveQuotas(quotasData.quotas);
+                    if (quotasRes.ok) {
+                        const quotasData = await quotasRes.json();
+                        if (quotasData?.quotas) {
+                            setLeaveQuotas(quotasData.quotas);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching leave data:', error);
@@ -223,10 +236,11 @@ export default function MyLeavesPage() {
     };
 
     const stats = React.useMemo(() => {
+        const requests = leaveRequests || [];
         return {
-            pending: leaveRequests.filter(r => r.status === 'Pending').length,
-            approved: leaveRequests.filter(r => r.status === 'Approved').length,
-            rejected: leaveRequests.filter(r => r.status === 'Rejected').length,
+            pending: requests.filter(r => r?.status === 'Pending').length,
+            approved: requests.filter(r => r?.status === 'Approved').length,
+            rejected: requests.filter(r => r?.status === 'Rejected').length,
         };
     }, [leaveRequests]);
 

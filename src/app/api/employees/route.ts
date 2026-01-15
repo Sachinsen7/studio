@@ -18,39 +18,70 @@ export async function GET() {
 // POST - Add new employee with automatic Firebase account creation
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { name, email, role, project, avatarUrl } = body;
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
+        const { name, email, adrsId, role, project, avatarUrl } = body;
 
         if (!name || !email || !role) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Generate Firebase email and default password
-        const firebaseEmail = email.includes('@') ? email : `${email}@adrs.com`;
+        // Generate Firebase login email (name@adrs.com format)
+        const namePart = name.toLowerCase().replace(/\s+/g, '');
+        const loginEmail = `${namePart}@adrs.com`;
         const defaultPassword = 'password'; // Default password for all new employees
+        
+        // Personal email is what user entered
+        const personalEmail = email.includes('@') ? email : `${email}@gmail.com`;
 
-        // Create Firebase account automatically
+        // Check if employee already exists in database (by personal email, login email, or ADRS ID)
+        const existingEmployee = await db.employee.findFirst({
+            where: {
+                OR: [
+                    { email: personalEmail },
+                    { loginEmail: loginEmail },
+                    ...(adrsId ? [{ adrsId: adrsId }] : []),
+                ],
+            },
+        });
+
+        if (existingEmployee) {
+            return NextResponse.json({ 
+                error: 'Employee with this email or ADRS ID already exists',
+                code: 'DUPLICATE_EMAIL'
+            }, { status: 409 });
+        }
+
+        // Create Firebase account with login email
         let firebaseResult;
+        let firebaseCreated = false;
         try {
-            firebaseResult = await createFirebaseUser(firebaseEmail, defaultPassword, name);
+            firebaseResult = await createFirebaseUser(loginEmail, defaultPassword, name);
             
             if (!firebaseResult.success) {
-                // If email already exists in Firebase, continue with employee creation
-                console.warn(`Firebase account already exists for ${firebaseEmail}`);
+                console.warn(`Firebase account already exists for ${loginEmail}`);
+            } else {
+                firebaseCreated = true;
             }
-        } catch (firebaseError) {
+        } catch (firebaseError: any) {
             console.error('Firebase account creation failed:', firebaseError);
-            // Continue with employee creation even if Firebase fails
+            if (firebaseError.message?.includes('Project Id')) {
+                console.warn('Firebase Admin not properly configured. Employee will be created without Firebase account.');
+            }
         }
 
         // Create employee in database
         const employee = await db.employee.create({
             data: {
                 name,
-                email: firebaseEmail,
+                email: personalEmail,      // Personal/contact email
+                loginEmail: loginEmail,    // Firebase login email
+                adrsId: adrsId || null,    // ADRS employee ID (optional)
                 role,
                 project: project || 'Unassigned',
-                avatarUrl: avatarUrl || `https://picsum.photos/seed/${name.toLowerCase().replace(/\s/g, '')}/100/100`,
+                avatarUrl: avatarUrl || `https://picsum.photos/seed/${namePart}/100/100`,
                 enrollmentDate: new Date(),
             },
         });
@@ -58,13 +89,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             employee,
             firebase: {
-                created: firebaseResult?.success || false,
-                email: firebaseEmail,
-                password: defaultPassword,
+                created: firebaseCreated,
+                loginEmail: loginEmail,
+                personalEmail: personalEmail,
+                password: firebaseCreated ? defaultPassword : undefined,
+                message: firebaseCreated 
+                    ? `Firebase account created. Login with: ${loginEmail}` 
+                    : 'Firebase account already exists or creation failed',
             }
         }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating employee:', error);
+        
+        if (error.code === 'P2002') {
+            return NextResponse.json({ 
+                error: 'Employee with this email or ADRS ID already exists',
+                code: 'DUPLICATE_EMAIL'
+            }, { status: 409 });
+        }
+        
         return NextResponse.json({ error: 'Failed to create employee' }, { status: 500 });
     }
 }

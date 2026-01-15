@@ -28,17 +28,39 @@ export async function PUT(
 ) {
     try {
         const { id } = await params;
-        const body = await request.json();
-        const { name, email, role, project, avatarUrl } = body;
+        
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
+        const { name, email, loginEmail, adrsId, role, project, avatarUrl } = body;
+
+        // Build update data object with only provided fields
+        const updateData: Record<string, any> = {};
+        if (name !== undefined) updateData.name = name;
+        if (email !== undefined) updateData.email = email;
+        if (loginEmail !== undefined) updateData.loginEmail = loginEmail || null;
+        if (adrsId !== undefined) updateData.adrsId = adrsId || null;
+        if (role !== undefined) updateData.role = role;
+        if (project !== undefined) updateData.project = project;
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
 
         const employee = await db.employee.update({
             where: { id },
-            data: { name, email, role, project, avatarUrl },
+            data: updateData,
         });
 
         return NextResponse.json(employee);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error updating employee:', error);
+        
+        if (error.code === 'P2002') {
+            return NextResponse.json({ 
+                error: 'Email or ADRS ID already in use by another employee',
+                code: 'DUPLICATE_EMAIL'
+            }, { status: 409 });
+        }
+        
         return NextResponse.json({ error: 'Failed to update employee' }, { status: 500 });
     }
 }

@@ -8,85 +8,84 @@ datasource db {
 }
 
 model Employee {
-  id             String       @id @default(cuid())
-  name           String
-  email          String       @unique
-  avatarUrl      String?
-  role           Role         @default(Developer)
-  project        String       @default("Unassigned")
-  enrollmentDate DateTime     @default(now())
-  
-  // Leave Quotas (set by admin)
-  casualLeaveQuota     Int      @default(1)
-  sickLeaveQuota       Int      @default(2)
-  earnedLeaveQuota     Int      @default(0)
-  maternityLeaveQuota  Int      @default(0)
-  paternityLeaveQuota  Int      @default(0)
-  workFromHomeQuota    Int      @default(4)
-  
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  attendance     Attendance[]
-  tasks          Task[]
-  leaveRequests  LeaveRequest[]
-  taskSubmissions TaskSubmission[]
-  dailyLogs      ProjectDailyLog[]
+  id                  String            @id @default(cuid())
+  name                String
+  email               String            @unique  // Personal/contact email (e.g., sparshsahu8435@gmail.com)
+  loginEmail          String?           @unique  // Firebase login email (e.g., sapeksh@adrs.com)
+  adrsId              String?           @unique  // ADRS Employee ID (manually assigned)
+  avatarUrl           String?
+  role                Role              @default(Developer)
+  project             String            @default("Unassigned")
+  enrollmentDate      DateTime          @default(now())
+  casualLeaveQuota    Int               @default(1)
+  sickLeaveQuota      Int               @default(2)
+  earnedLeaveQuota    Int               @default(0)
+  maternityLeaveQuota Int               @default(0)
+  paternityLeaveQuota Int               @default(0)
+  workFromHomeQuota   Int               @default(4)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  attendance          Attendance[]
+  leaveRequests       LeaveRequest[]
+  dailyLogs           ProjectDailyLog[]
+  taskSubmissions     TaskSubmission[]
+  tasks               Task[]
 
   @@map("employees")
 }
 
 model Project {
-  id          String        @id @default(cuid())
-  name        String        @unique
+  id          String            @id @default(cuid())
+  name        String            @unique
   clientName  String?
-  status      ProjectStatus @default(OnTrack)
-  progress    Int           @default(0)
+  status      ProjectStatus     @default(OnTrack)
+  progress    Int               @default(0)
   startDate   DateTime?
   endDate     DateTime?
   description String?
-  techStack   String?       // JSON array of technologies
+  techStack   String?
   githubRepo  String?
-  projectType ProjectType   @default(Company)
-  assignedTo  String?       // For employee-specific projects
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  tasks       Task[]
-  documents   ProjectDocument[]
+  projectType ProjectType       @default(Company)
+  assignedTo  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   dailyLogs   ProjectDailyLog[]
+  documents   ProjectDocument[]
+  tasks       Task[]
 
   @@map("projects")
 }
 
 model ProjectDocument {
-  id          String   @id @default(cuid())
-  projectId   String
-  title       String
-  type        DocumentType @default(General)
-  content     String?
-  fileUrl     String?
-  fileName    String?
-  fileSize    Int?
-  mimeType    String?
-  uploadedBy  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id         String       @id @default(cuid())
+  projectId  String
+  title      String
+  type       DocumentType @default(General)
+  content    String?
+  fileUrl    String?
+  fileName   String?
+  fileSize   Int?
+  mimeType   String?
+  uploadedBy String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_documents")
 }
 
 model ProjectDailyLog {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   projectId   String
   employeeId  String
-  date        DateTime @default(now())
+  date        DateTime    @default(now())
   summary     String
   hoursWorked Float?
   category    LogCategory @default(General)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_daily_logs")
 }
@@ -106,10 +105,10 @@ model Task {
   projectId      String
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+  assignments    TaskAssignment[]
+  submissions    TaskSubmission[]
   assignee       Employee           @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
   project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submissions    TaskSubmission[]
-  assignments    TaskAssignment[]
 
   @@map("tasks")
 }
@@ -132,8 +131,8 @@ model TaskSubmission {
   selfieUrl   String?
   notes       String?
   submittedAt DateTime @default(now())
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_submissions")
 }
@@ -154,18 +153,18 @@ model Attendance {
 }
 
 model LeaveRequest {
-  id            String      @id @default(cuid())
+  id            String        @id @default(cuid())
   employeeId    String
   startDate     DateTime
   endDate       DateTime
-  leaveType     LeaveType   @default(Casual)
+  leaveType     LeaveType     @default(Casual)
   leaveDuration LeaveDuration @default(FullDay)
   reason        String?
-  status        LeaveStatus @default(Pending)
+  status        LeaveStatus   @default(Pending)
   adminComment  String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  employee      Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("leave_requests")
 }

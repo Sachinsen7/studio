@@ -16,13 +16,31 @@ export function getFirebaseAdmin() {
     }
 
     // Initialize Firebase Admin
-    // For Firebase App Hosting, credentials are automatically provided
     try {
-        adminApp = initializeApp();
+        // Check if we have service account credentials
+        const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        
+        if (serviceAccount) {
+            // Use service account credentials
+            const credentials = JSON.parse(serviceAccount);
+            adminApp = initializeApp({
+                credential: cert(credentials),
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            });
+        } else if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+            // Use project ID only (for Firebase App Hosting or when running locally with gcloud auth)
+            adminApp = initializeApp({
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            });
+        } else {
+            // Try default initialization (for Firebase App Hosting)
+            adminApp = initializeApp();
+        }
+        
         return adminApp;
     } catch (error) {
         console.error('Failed to initialize Firebase Admin:', error);
-        throw new Error('Firebase Admin initialization failed');
+        throw new Error('Firebase Admin initialization failed. Make sure NEXT_PUBLIC_FIREBASE_PROJECT_ID is set in your environment variables.');
     }
 }
 
@@ -58,3 +76,4 @@ export async function createFirebaseUser(email: string, password: string, displa
         throw error;
     }
 }
+

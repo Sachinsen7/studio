@@ -83,8 +83,8 @@ export default function DashboardPage() {
         const employeesData = await employeesRes.json();
 
         setStats(statsData);
-        setProjects(projectsData);
-        setRecentEmployees(employeesData.slice(1, 5));
+        setProjects(Array.isArray(projectsData) ? projectsData : []);
+        setRecentEmployees(Array.isArray(employeesData) ? employeesData.slice(0, 4) : []);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {

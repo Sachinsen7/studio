@@ -77,18 +77,19 @@ export default function LeavesPage() {
         try {
             const res = await fetch('/api/leave-requests');
             const data = await res.json();
-            setLeaveRequests(data);
+            setLeaveRequests(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching leave requests:', error);
             toast({ title: 'Error', description: 'Failed to load leave requests', variant: 'destructive' });
+            setLeaveRequests([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredRequests = leaveRequests.filter(
-        (req) => filterStatus === 'all' || req.status === filterStatus
-    );
+    const filteredRequests = Array.isArray(leaveRequests) ? leaveRequests.filter(
+        (req) => filterStatus === 'all' || req?.status === filterStatus
+    ) : [];
 
     const openDialog = (request: LeaveRequest, action: 'approve' | 'reject') => {
         setSelectedRequest(request);
@@ -113,7 +114,7 @@ export default function LeavesPage() {
             if (!res.ok) throw new Error('Failed to update');
 
             const updated = await res.json();
-            setLeaveRequests((prev) => prev.map((req) => req.id === updated.id ? updated : req));
+            setLeaveRequests((prev) => Array.isArray(prev) ? prev.map((req) => req?.id === updated?.id ? updated : req) : [updated]);
             
             toast({
                 title: `Leave Request ${newStatus}`,
@@ -226,45 +227,45 @@ export default function LeavesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredRequests.map((request) => {
-                                const startDate = new Date(request.startDate);
-                                const endDate = new Date(request.endDate);
+                            {Array.isArray(filteredRequests) && filteredRequests.length > 0 ? filteredRequests.map((request) => {
+                                const startDate = request?.startDate ? new Date(request.startDate) : new Date();
+                                const endDate = request?.endDate ? new Date(request.endDate) : new Date();
                                 const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                const StatusIcon = statusConfig[request.status].icon;
+                                const StatusIcon = statusConfig[request?.status || 'Pending']?.icon || statusConfig.Pending.icon;
 
                                 return (
-                                    <TableRow key={request.id}>
+                                    <TableRow key={request?.id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={request.employee.avatarUrl || undefined} alt={request.employee.name} />
-                                                    <AvatarFallback>{request.employee.name.charAt(0)}</AvatarFallback>
+                                                    <AvatarImage src={request?.employee?.avatarUrl || undefined} alt={request?.employee?.name || 'Employee'} />
+                                                    <AvatarFallback>{request?.employee?.name?.charAt(0) || '?'}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <p className="font-medium">{request.employee.name}</p>
-                                                    <p className="text-sm text-muted-foreground">{request.employee.role}</p>
+                                                    <p className="font-medium">{request?.employee?.name || 'Unknown'}</p>
+                                                    <p className="text-sm text-muted-foreground">{request?.employee?.role || ''}</p>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{request.leaveType}</Badge>
+                                            <Badge variant="outline">{request?.leaveType || 'Unknown'}</Badge>
                                         </TableCell>
                                         <TableCell>{startDate.toLocaleDateString()}</TableCell>
                                         <TableCell>{endDate.toLocaleDateString()}</TableCell>
                                         <TableCell>{duration} day{duration > 1 ? 's' : ''}</TableCell>
                                         <TableCell className="max-w-[200px]">
                                             <p className="text-sm text-muted-foreground truncate">
-                                                {request.reason || 'No reason provided'}
+                                                {request?.reason || 'No reason provided'}
                                             </p>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className={statusConfig[request.status].color}>
+                                            <Badge variant="outline" className={statusConfig[request?.status || 'Pending']?.color}>
                                                 <StatusIcon className="h-3 w-3 mr-1" />
-                                                {request.status}
+                                                {request?.status || 'Pending'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {request.status === 'Pending' ? (
+                                            {request?.status === 'Pending' ? (
                                                 <div className="flex gap-2">
                                                     <Button
                                                         size="sm"
@@ -288,9 +289,9 @@ export default function LeavesPage() {
                                             ) : (
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm text-muted-foreground">
-                                                        {request.status}
+                                                        {request?.status}
                                                     </span>
-                                                    {request.adminComment && (
+                                                    {request?.adminComment && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -305,7 +306,13 @@ export default function LeavesPage() {
                                         </TableCell>
                                     </TableRow>
                                 );
-                            })}
+                            }) : (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                        No leave requests found
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

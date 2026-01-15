@@ -70,21 +70,48 @@ export default function DailyLogsPage() {
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!user?.email) return;
+            if (!user?.email) {
+                console.log('No user email found');
+                return;
+            }
             try {
-                const empRes = await fetch('/api/employees');
-                const employees = await empRes.json();
-                const currentEmployee = employees.find((e: { email: string }) => e.email === user.email);
+                console.log('Fetching employee data for email:', user.email);
+                
+                // Use the new /me endpoint for better performance
+                const empRes = await fetch(`/api/employees/me?email=${encodeURIComponent(user.email)}`);
+                console.log('Employee response status:', empRes.status);
+                
+                if (!empRes.ok) {
+                    console.error('Failed to fetch employee:', empRes.status, empRes.statusText);
+                    setLoading(false);
+                    return;
+                }
+                
+                const currentEmployee = await empRes.json();
+                console.log('Current employee data:', currentEmployee);
 
-                if (currentEmployee) {
+                if (currentEmployee?.id) {
                     setEmployeeId(currentEmployee.id);
-                    setProjectName(currentEmployee.project);
+                    const projectName = currentEmployee.project || 'Unassigned';
+                    console.log('Setting project name:', projectName);
+                    setProjectName(projectName);
 
                     if (currentEmployee.project && currentEmployee.project !== 'Unassigned') {
+                        console.log('Fetching logs for project:', currentEmployee.project);
                         const logsRes = await fetch(`/api/projects/${encodeURIComponent(currentEmployee.project)}/daily-logs?employeeId=${currentEmployee.id}`);
-                        const logsData = await logsRes.json();
-                        setDailyLogs(Array.isArray(logsData) ? logsData : []);
+                        console.log('Logs response status:', logsRes.status);
+                        if (logsRes.ok) {
+                            const logsData = await logsRes.json();
+                            console.log('Logs data:', logsData);
+                            setDailyLogs(Array.isArray(logsData) ? logsData : []);
+                        } else {
+                            console.error('Failed to fetch logs:', await logsRes.text());
+                        }
+                    } else {
+                        console.log('No project assigned or project is Unassigned');
                     }
+                } else {
+                    console.log('No employee ID found');
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -137,12 +164,14 @@ export default function DailyLogsPage() {
     };
 
     // Calculate stats
-    const todayLogs = dailyLogs.filter(l => {
+    const todayLogs = (dailyLogs || []).filter(l => {
+        if (!l?.date) return false;
         const logDate = new Date(l.date).toDateString();
         return logDate === new Date().toDateString();
     });
-    const totalHoursToday = todayLogs.reduce((sum, l) => sum + (l.hoursWorked || 0), 0);
-    const totalLogsThisWeek = dailyLogs.filter(l => {
+    const totalHoursToday = todayLogs.reduce((sum, l) => sum + (l?.hoursWorked || 0), 0);
+    const totalLogsThisWeek = (dailyLogs || []).filter(l => {
+        if (!l?.date) return false;
         const logDate = new Date(l.date);
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
@@ -166,6 +195,7 @@ export default function DailyLogsPage() {
                         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
                         <h3 className="font-semibold text-lg mb-2">No Project Assigned</h3>
                         <p className="text-muted-foreground text-sm">You need to be assigned to a project to add daily logs.</p>
+                        <p className="text-xs text-muted-foreground mt-2">Debug: projectName = "{projectName}"</p>
                     </CardContent>
                 </Card>
             </>
@@ -231,33 +261,36 @@ export default function DailyLogsPage() {
                     <CardDescription>Track what you've worked on each day</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {dailyLogs.length > 0 ? (
+                    {dailyLogs && dailyLogs.length > 0 ? (
                         <div className="space-y-4">
-                            {dailyLogs.map((log) => (
-                                <div key={log.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="outline" className={cn('text-xs', categoryColors[log.category] || categoryColors.General)}>
-                                                {log.category}
-                                            </Badge>
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <CalendarIcon className="h-3 w-3" />
-                                                {format(new Date(log.date), 'MMM dd, yyyy')}
-                                            </span>
-                                            {log.hoursWorked && (
+                            {dailyLogs.map((log) => {
+                                if (!log?.id) return null;
+                                return (
+                                    <div key={log.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Badge variant="outline" className={cn('text-xs', categoryColors[log.category] || categoryColors.General)}>
+                                                    {log.category || 'General'}
+                                                </Badge>
                                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {log.hoursWorked} hrs
+                                                    <CalendarIcon className="h-3 w-3" />
+                                                    {log.date ? format(new Date(log.date), 'MMM dd, yyyy') : 'N/A'}
                                                 </span>
-                                            )}
+                                                {log.hoursWorked && (
+                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {log.hoursWorked} hrs
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm">{log.summary || 'No summary'}</p>
                                         </div>
-                                        <p className="text-sm">{log.summary}</p>
+                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteLog(log.id)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteLog(log.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="text-center py-12">

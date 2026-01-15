@@ -67,30 +67,61 @@ export default function EmployeeDashboardPage() {
     const fetchData = async () => {
       if (!user?.email) return;
       try {
-        // Get employee by email
-        const empRes = await fetch('/api/employees');
-        const employees = await empRes.json();
-        const currentEmployee = employees.find((e: { email: string }) => e.email === user.email);
+        // Use the new /me endpoint for better performance
+        const empRes = await fetch(`/api/employees/me?email=${encodeURIComponent(user.email)}`);
+        if (!empRes.ok) {
+          console.error('Failed to fetch employee');
+          setLoading(false);
+          return;
+        }
+        
+        const currentEmployee = await empRes.json();
+        console.log('Current employee:', currentEmployee);
 
-        if (currentEmployee) {
+        if (currentEmployee?.id) {
           setEmployeeId(currentEmployee.id);
 
-          // Fetch tasks
-          const tasksRes = await fetch(`/api/tasks?assigneeId=${currentEmployee.id}`);
-          const tasksData = await tasksRes.json();
-          setMyTasks(tasksData);
+          // Fetch leave requests and projects in parallel
+          const [leavesRes, projectsRes] = await Promise.all([
+            fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`),
+            fetch('/api/projects')
+          ]);
 
-          // Fetch leave requests
-          const leavesRes = await fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`);
-          const leavesData = await leavesRes.json();
-          setMyLeaveRequests(leavesData);
+          // Process tasks from employee data (already included)
+          const tasks = Array.isArray(currentEmployee.tasks) ? currentEmployee.tasks : [];
+          setMyTasks(tasks);
 
-          // Get unique projects from tasks
-          const projectIds = [...new Set(tasksData.map((t: Task) => t.projectId))];
-          const projectsRes = await fetch('/api/projects');
-          const allProjects = await projectsRes.json();
-          const employeeProjects = allProjects.filter((p: Project) => projectIds.includes(p.id));
-          setMyProjects(employeeProjects);
+          // Process projects - show both projects from tasks AND the assigned project
+          if (projectsRes.ok) {
+            const allProjects = await projectsRes.json();
+            if (Array.isArray(allProjects)) {
+              // Get project IDs from tasks
+              const projectIdsFromTasks = [...new Set(tasks.map((t: Task) => t?.projectId).filter(Boolean))];
+              
+              console.log('Employee project:', currentEmployee.project);
+              console.log('All projects:', allProjects.map(p => ({ id: p.id, name: p.name })));
+              console.log('Project IDs from tasks:', projectIdsFromTasks);
+              
+              // Filter projects: either from tasks OR matching employee's assigned project name
+              const employeeProjects = allProjects.filter((p: Project) => {
+                if (!p?.id) return false;
+                // Include if project ID matches task projectId
+                if (projectIdsFromTasks.includes(p.id)) return true;
+                // Include if project name matches employee's assigned project
+                if (currentEmployee.project && p.name === currentEmployee.project) return true;
+                return false;
+              });
+              
+              console.log('Filtered employee projects:', employeeProjects.map(p => ({ id: p.id, name: p.name })));
+              setMyProjects(employeeProjects);
+            }
+          }
+
+          // Process leave requests
+          if (leavesRes.ok) {
+            const leavesData = await leavesRes.json();
+            setMyLeaveRequests(Array.isArray(leavesData) ? leavesData : []);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -101,11 +132,11 @@ export default function EmployeeDashboardPage() {
     fetchData();
   }, [user?.email]);
 
-  const projectCount = myProjects.length;
+  const projectCount = myProjects?.length || 0;
   const enrollmentStatus = projectCount === 0 ? 'Not Enrolled' : projectCount === 1 ? 'Single Project' : 'Multiple Projects';
 
-  const inProgressTasks = myTasks.filter(t => t.status === 'InProgress').length;
-  const completedTasks = myTasks.filter(t => t.status === 'Done').length;
+  const inProgressTasks = (myTasks || []).filter(t => t?.status === 'InProgress').length;
+  const completedTasks = (myTasks || []).filter(t => t?.status === 'Done').length;
 
   const statusColors: Record<string, string> = {
     Approved: 'text-green-400 bg-green-900/20 border-green-400/20',
@@ -183,7 +214,7 @@ export default function EmployeeDashboardPage() {
             <CalendarCheck className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{myLeaveRequests.length}</div>
+            <div className="text-4xl font-bold">{myLeaveRequests?.length || 0}</div>
             <p className="text-xs text-muted-foreground">Total requests submitted</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
@@ -206,7 +237,7 @@ export default function EmployeeDashboardPage() {
       </div>
 
       {/* Projects Section */}
-      {myProjects.length > 0 && (
+      {myProjects && myProjects.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>My Projects</CardTitle>
@@ -215,8 +246,9 @@ export default function EmployeeDashboardPage() {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               {myProjects.map((project) => {
-                const projectTasks = myTasks.filter(t => t.projectId === project.id);
-                const completedProjectTasks = projectTasks.filter(t => t.status === 'Done').length;
+                if (!project?.id) return null;
+                const projectTasks = (myTasks || []).filter(t => t?.projectId === project.id);
+                const completedProjectTasks = projectTasks.filter(t => t?.status === 'Done').length;
                 const totalProjectTasks = projectTasks.length;
                 const taskProgress = totalProjectTasks > 0 ? (completedProjectTasks / totalProjectTasks) * 100 : 0;
 
@@ -225,7 +257,7 @@ export default function EmployeeDashboardPage() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-lg">{project.name}</CardTitle>
+                          <CardTitle className="text-lg">{project.name || 'Unnamed Project'}</CardTitle>
                           <CardDescription className="text-xs mt-1">
                             {projectTasks.length} task{projectTasks.length !== 1 ? 's' : ''} assigned
                           </CardDescription>
@@ -321,24 +353,34 @@ export default function EmployeeDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myTasks.slice(0, 5).map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>{task.project?.name || 'Unknown'}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={task.status === 'Done' ? 'default' : 'secondary'}
-                        className={cn(
-                          task.status === 'InProgress' && 'bg-yellow-900/50 text-yellow-300 border-yellow-400/20',
-                          task.status === 'Done' && 'bg-green-900/50 text-green-300 border-green-400/20',
-                          task.status === 'ToDo' && 'bg-red-900/50 text-red-300 border-red-400/20'
-                        )}
-                      >
-                        {task.status === 'InProgress' ? 'In Progress' : task.status === 'ToDo' ? 'To Do' : 'Done'}
-                      </Badge>
+                {(myTasks || []).slice(0, 5).map((task) => {
+                  if (!task?.id) return null;
+                  return (
+                    <TableRow key={task.id}>
+                      <TableCell className="font-medium">{task.title || 'Untitled Task'}</TableCell>
+                      <TableCell>{task.project?.name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={task.status === 'Done' ? 'default' : 'secondary'}
+                          className={cn(
+                            task.status === 'InProgress' && 'bg-yellow-900/50 text-yellow-300 border-yellow-400/20',
+                            task.status === 'Done' && 'bg-green-900/50 text-green-300 border-green-400/20',
+                            task.status === 'ToDo' && 'bg-red-900/50 text-red-300 border-red-400/20'
+                          )}
+                        >
+                          {task.status === 'InProgress' ? 'In Progress' : task.status === 'ToDo' ? 'To Do' : 'Done'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {(!myTasks || myTasks.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      No tasks assigned yet
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -357,22 +399,32 @@ export default function EmployeeDashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myLeaveRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell>
-                      {new Date(request.startDate).toLocaleDateString()} -{' '}
-                      {new Date(request.endDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn("font-medium", statusColors[request.status])}
-                      >
-                        {request.status}
-                      </Badge>
+                {(myLeaveRequests || []).map((request) => {
+                  if (!request?.id) return null;
+                  return (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        {request.startDate ? new Date(request.startDate).toLocaleDateString() : 'N/A'} -{' '}
+                        {request.endDate ? new Date(request.endDate).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn("font-medium", statusColors[request.status] || statusColors.Pending)}
+                        >
+                          {request.status || 'Pending'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {(!myLeaveRequests || myLeaveRequests.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
+                      No leave requests yet
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>

@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
 // POST - Create new task
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
         const { title, description, assigneeId, projectId, status, priority, dueDate, attachments, approvalStatus, requestedBy } = body;
 
         if (!title || !assigneeId || !projectId) {

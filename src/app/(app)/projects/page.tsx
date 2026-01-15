@@ -151,10 +151,11 @@ export default function ProjectsPage() {
     try {
       const res = await fetch('/api/projects');
       const data = await res.json();
-      setProjects(data);
+      setProjects(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({ title: 'Error', description: 'Failed to load projects', variant: 'destructive' });
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -206,7 +207,7 @@ export default function ProjectsPage() {
       if (!res.ok) throw new Error('Failed to create project');
       
       const createdProject = await res.json();
-      setProjects([createdProject, ...projects]);
+      setProjects([createdProject, ...(Array.isArray(projects) ? projects : [])]);
       setCreateDialogOpen(false);
       setNewProject({
         name: '', clientName: '', description: '', githubRepo: '', techStack: '',
@@ -231,7 +232,7 @@ export default function ProjectsPage() {
       });
       if (!res.ok) throw new Error('Failed to add document');
       const doc = await res.json();
-      setDocuments([doc, ...documents]);
+      setDocuments([doc, ...(Array.isArray(documents) ? documents : [])]);
       setAddDocDialogOpen(false);
       setNewDoc({ title: '', type: 'General', fileUrl: '', content: '' });
       toast({ title: 'Success', description: 'Document added successfully' });
@@ -246,7 +247,7 @@ export default function ProjectsPage() {
     if (!selectedProject) return;
     try {
       await fetch(`/api/projects/${encodeURIComponent(selectedProject.name)}/documents/${docId}`, { method: 'DELETE' });
-      setDocuments(documents.filter(d => d.id !== docId));
+      setDocuments(Array.isArray(documents) ? documents.filter(d => d?.id !== docId) : []);
       toast({ title: 'Success', description: 'Document deleted' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete document', variant: 'destructive' });
@@ -260,20 +261,27 @@ export default function ProjectsPage() {
       // For admin, we'll use a placeholder employee ID - in real app, get from auth
       const empRes = await fetch('/api/employees');
       const employees = await empRes.json();
-      const adminEmployee = employees[0]; // Use first employee as placeholder
+      const employeesArray = Array.isArray(employees) ? employees : [];
+      const adminEmployee = employeesArray[0]; // Use first employee as placeholder
+      
+      if (!adminEmployee) {
+        toast({ title: 'Error', description: 'No employees found', variant: 'destructive' });
+        setAddingLog(false);
+        return;
+      }
       
       const res = await fetch(`/api/projects/${encodeURIComponent(selectedProject.name)}/daily-logs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newLog,
-          employeeId: adminEmployee?.id,
+          employeeId: adminEmployee.id,
           hoursWorked: newLog.hoursWorked || null,
         }),
       });
       if (!res.ok) throw new Error('Failed to add log');
       const log = await res.json();
-      setDailyLogs([log, ...dailyLogs]);
+      setDailyLogs([log, ...(Array.isArray(dailyLogs) ? dailyLogs : [])]);
       setAddLogDialogOpen(false);
       setNewLog({ summary: '', hoursWorked: '', category: 'General' });
       toast({ title: 'Success', description: 'Daily log added successfully' });
@@ -288,7 +296,7 @@ export default function ProjectsPage() {
     if (!selectedProject) return;
     try {
       await fetch(`/api/projects/${encodeURIComponent(selectedProject.name)}/daily-logs/${logId}`, { method: 'DELETE' });
-      setDailyLogs(dailyLogs.filter(l => l.id !== logId));
+      setDailyLogs(Array.isArray(dailyLogs) ? dailyLogs.filter(l => l?.id !== logId) : []);
       toast({ title: 'Success', description: 'Log deleted' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete log', variant: 'destructive' });
@@ -314,19 +322,19 @@ export default function ProjectsPage() {
 
       {/* Projects Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => {
-          const StatusIcon = statusConfig[project.status].icon;
+        {Array.isArray(projects) && projects.length > 0 ? projects.map((project) => {
+          const StatusIcon = statusConfig[project?.status || 'OnTrack']?.icon || statusConfig.OnTrack.icon;
           return (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleSelectProject(project)}>
+            <Card key={project?.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleSelectProject(project)}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    {project.clientName && <CardDescription className="mt-1">{project.clientName}</CardDescription>}
+                    <CardTitle className="text-lg">{project?.name || 'Untitled'}</CardTitle>
+                    {project?.clientName && <CardDescription className="mt-1">{project.clientName}</CardDescription>}
                   </div>
-                  <Badge variant="outline" className={cn('text-xs', statusConfig[project.status].color)}>
+                  <Badge variant="outline" className={cn('text-xs', statusConfig[project?.status || 'OnTrack']?.color)}>
                     <StatusIcon className="h-3 w-3 mr-1" />
-                    {statusConfig[project.status].label}
+                    {statusConfig[project?.status || 'OnTrack']?.label}
                   </Badge>
                 </div>
               </CardHeader>
@@ -334,21 +342,21 @@ export default function ProjectsPage() {
                 <div>
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{project.progress}%</span>
+                    <span className="font-medium">{project?.progress || 0}%</span>
                   </div>
-                  <Progress value={project.progress} className="h-2" />
+                  <Progress value={project?.progress || 0} className="h-2" />
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{project.team?.length || 0} members</span>
+                    <span>{Array.isArray(project?.team) ? project.team.length : 0} members</span>
                   </div>
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <ListTodo className="h-4 w-4" />
-                    <span>{project.tasks?.length || 0} tasks</span>
+                    <span>{Array.isArray(project?.tasks) ? project.tasks.length : 0} tasks</span>
                   </div>
                 </div>
-                {project.githubRepo && (
+                {project?.githubRepo && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Github className="h-3 w-3" />
                     <span className="truncate">{project.githubRepo}</span>
@@ -357,10 +365,10 @@ export default function ProjectsPage() {
               </CardContent>
             </Card>
           );
-        })}
+        }) : null}
       </div>
 
-      {projects.length === 0 && (
+      {(!Array.isArray(projects) || projects.length === 0) && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -408,26 +416,52 @@ export default function ProjectsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Start Date</Label>
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn('justify-start text-left font-normal', !newProject.startDate && 'text-muted-foreground')}>
+                    <Button 
+                      variant="outline" 
+                      className={cn(
+                        'justify-start text-left font-normal w-full', 
+                        !newProject.startDate && 'text-muted-foreground'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {newProject.startDate ? format(newProject.startDate, 'PPP') : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={newProject.startDate} onSelect={(date) => setNewProject({ ...newProject, startDate: date })} initialFocus /></PopoverContent>
+                  <PopoverContent className="w-auto p-0" align="start" side="bottom">
+                    <Calendar 
+                      mode="single" 
+                      selected={newProject.startDate} 
+                      onSelect={(date) => setNewProject({ ...newProject, startDate: date })} 
+                      initialFocus 
+                    />
+                  </PopoverContent>
                 </Popover>
               </div>
               <div className="grid gap-2">
                 <Label>End Date</Label>
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn('justify-start text-left font-normal', !newProject.endDate && 'text-muted-foreground')}>
+                    <Button 
+                      variant="outline" 
+                      className={cn(
+                        'justify-start text-left font-normal w-full', 
+                        !newProject.endDate && 'text-muted-foreground'
+                      )}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {newProject.endDate ? format(newProject.endDate, 'PPP') : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={newProject.endDate} onSelect={(date) => setNewProject({ ...newProject, endDate: date })} initialFocus /></PopoverContent>
+                  <PopoverContent className="w-auto p-0" align="start" side="bottom">
+                    <Calendar 
+                      mode="single" 
+                      selected={newProject.endDate} 
+                      onSelect={(date) => setNewProject({ ...newProject, endDate: date })} 
+                      initialFocus 
+                    />
+                  </PopoverContent>
                 </Popover>
               </div>
             </div>
@@ -518,17 +552,17 @@ export default function ProjectsPage() {
                 </TabsContent>
                 
                 <TabsContent value="members" className="space-y-3 mt-4">
-                  {selectedProject.team && selectedProject.team.length > 0 ? (
+                  {Array.isArray(selectedProject?.team) && selectedProject.team.length > 0 ? (
                     selectedProject.team.map((member) => (
-                      <Card key={member.id}><CardContent className="p-4"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarImage src={member.avatarUrl} /><AvatarFallback>{member.name.charAt(0)}</AvatarFallback></Avatar><div className="flex-1"><p className="font-medium">{member.name}</p><p className="text-sm text-muted-foreground">{member.email}</p></div><Badge variant="outline">{member.role}</Badge></div></CardContent></Card>
+                      <Card key={member?.id}><CardContent className="p-4"><div className="flex items-center gap-3"><Avatar className="h-10 w-10"><AvatarImage src={member?.avatarUrl} /><AvatarFallback>{member?.name?.charAt(0) || '?'}</AvatarFallback></Avatar><div className="flex-1"><p className="font-medium">{member?.name || 'Unknown'}</p><p className="text-sm text-muted-foreground">{member?.email || ''}</p></div><Badge variant="outline">{member?.role || 'Member'}</Badge></div></CardContent></Card>
                     ))
                   ) : <p className="text-sm text-muted-foreground text-center py-8">No team members assigned</p>}
                 </TabsContent>
                 
                 <TabsContent value="tasks" className="space-y-3 mt-4">
-                  {selectedProject.tasks && selectedProject.tasks.length > 0 ? (
+                  {Array.isArray(selectedProject?.tasks) && selectedProject.tasks.length > 0 ? (
                     selectedProject.tasks.map((task) => (
-                      <Card key={task.id}><CardContent className="p-4"><div className="flex items-center justify-between"><p className="font-medium">{task.title}</p><Badge variant="outline">{task.status}</Badge></div></CardContent></Card>
+                      <Card key={task?.id}><CardContent className="p-4"><div className="flex items-center justify-between"><p className="font-medium">{task?.title || 'Untitled'}</p><Badge variant="outline">{task?.status || 'Unknown'}</Badge></div></CardContent></Card>
                     ))
                   ) : <p className="text-sm text-muted-foreground text-center py-8">No tasks created yet</p>}
                 </TabsContent>
@@ -542,27 +576,27 @@ export default function ProjectsPage() {
                   </div>
                   {loadingDocs ? (
                     <div className="flex justify-center py-8"><LoaderCircle className="h-6 w-6 animate-spin" /></div>
-                  ) : documents.length > 0 ? (
+                  ) : Array.isArray(documents) && documents.length > 0 ? (
                     <div className="space-y-3">
                       {documents.map((doc) => (
-                        <Card key={doc.id}>
+                        <Card key={doc?.id}>
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3">
                                 <FileIcon className="h-8 w-8 text-primary mt-1" />
                                 <div>
-                                  <p className="font-medium">{doc.title}</p>
+                                  <p className="font-medium">{doc?.title || 'Untitled'}</p>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <Badge variant="outline" className="text-xs">{doc.type}</Badge>
-                                    <span className="text-xs text-muted-foreground">by {doc.uploadedBy}</span>
-                                    <span className="text-xs text-muted-foreground">{format(new Date(doc.createdAt), 'MMM dd, yyyy')}</span>
+                                    <Badge variant="outline" className="text-xs">{doc?.type || 'General'}</Badge>
+                                    <span className="text-xs text-muted-foreground">by {doc?.uploadedBy || 'Unknown'}</span>
+                                    <span className="text-xs text-muted-foreground">{doc?.createdAt ? format(new Date(doc.createdAt), 'MMM dd, yyyy') : ''}</span>
                                   </div>
-                                  {doc.fileUrl && (
+                                  {doc?.fileUrl && (
                                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
                                       <ExternalLink className="h-3 w-3" />View File
                                     </a>
                                   )}
-                                  {doc.content && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{doc.content}</p>}
+                                  {doc?.content && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{doc.content}</p>}
                                 </div>
                               </div>
                               <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteDocument(doc.id)}>
@@ -593,31 +627,31 @@ export default function ProjectsPage() {
                   </div>
                   {loadingLogs ? (
                     <div className="flex justify-center py-8"><LoaderCircle className="h-6 w-6 animate-spin" /></div>
-                  ) : dailyLogs.length > 0 ? (
+                  ) : Array.isArray(dailyLogs) && dailyLogs.length > 0 ? (
                     <div className="space-y-3">
                       {dailyLogs.map((log) => (
-                        <Card key={log.id}>
+                        <Card key={log?.id}>
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3">
                                 <Avatar className="h-10 w-10">
-                                  <AvatarImage src={log.employee?.avatarUrl} />
-                                  <AvatarFallback>{log.employee?.name?.charAt(0) || '?'}</AvatarFallback>
+                                  <AvatarImage src={log?.employee?.avatarUrl} />
+                                  <AvatarFallback>{log?.employee?.name?.charAt(0) || '?'}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium">{log.employee?.name || 'Unknown'}</p>
-                                    <Badge variant="outline" className={cn('text-xs', categoryColors[log.category] || categoryColors.General)}>
-                                      {log.category}
+                                    <p className="font-medium">{log?.employee?.name || 'Unknown'}</p>
+                                    <Badge variant="outline" className={cn('text-xs', categoryColors[log?.category || 'General'] || categoryColors.General)}>
+                                      {log?.category || 'General'}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-1">{log.summary}</p>
+                                  <p className="text-sm text-muted-foreground mt-1">{log?.summary || 'No summary'}</p>
                                   <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1">
                                       <CalendarIcon className="h-3 w-3" />
-                                      {format(new Date(log.date), 'MMM dd, yyyy')}
+                                      {log?.date ? format(new Date(log.date), 'MMM dd, yyyy') : ''}
                                     </span>
-                                    {log.hoursWorked && (
+                                    {log?.hoursWorked && (
                                       <span className="flex items-center gap-1">
                                         <Clock className="h-3 w-3" />
                                         {log.hoursWorked} hrs

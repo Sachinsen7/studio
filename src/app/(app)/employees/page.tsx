@@ -45,6 +45,7 @@ type Employee = {
   id: string;
   name: string;
   email: string;
+  adrsId?: string | null;
   avatarUrl: string | null;
   role: 'Developer' | 'Designer' | 'Manager' | 'QA' | 'Admin';
   project: string;
@@ -89,6 +90,7 @@ export default function EmployeesPage() {
   const [newEmployee, setNewEmployee] = React.useState({
     name: '',
     email: '',
+    adrsId: '',
     role: 'Developer',
     project: '',
     avatarUrl: '',
@@ -103,11 +105,13 @@ export default function EmployeesPage() {
       ]);
       const empData = await empRes.json();
       const projData = await projRes.json();
-      setEmployees(empData);
-      setProjects(projData);
+      setEmployees(Array.isArray(empData) ? empData : []);
+      setProjects(Array.isArray(projData) ? projData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
+      setEmployees([]);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -117,14 +121,14 @@ export default function EmployeesPage() {
     fetchData();
   }, [fetchData]);
 
-  const filteredEmployees = employees.filter((emp) => {
+  const filteredEmployees = Array.isArray(employees) ? employees.filter((emp) => {
     const matchesSearch =
-      emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = filterRole === 'all' || emp.role === filterRole;
-    const matchesProject = filterProject === 'all' || emp.project === filterProject;
+      emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = filterRole === 'all' || emp?.role === filterRole;
+    const matchesProject = filterProject === 'all' || emp?.project === filterProject;
     return matchesSearch && matchesRole && matchesProject;
-  });
+  }) : [];
 
   const handleAddEmployee = async () => {
     try {
@@ -133,13 +137,26 @@ export default function EmployeesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEmployee),
       });
-      if (!res.ok) throw new Error('Failed to add employee');
+      
       const data = await res.json();
       
-      setEmployees((prev) => [data.employee, ...prev]);
+      if (!res.ok) {
+        if (data.code === 'DUPLICATE_EMAIL') {
+          toast({ 
+            title: 'Error', 
+            description: 'An employee with this email already exists',
+            variant: 'destructive' 
+          });
+        } else {
+          throw new Error(data.error || 'Failed to add employee');
+        }
+        return;
+      }
+      
+      setEmployees((prev) => [data?.employee, ...(Array.isArray(prev) ? prev : [])]);
       
       // Show success message with Firebase credentials
-      if (data.firebase?.created) {
+      if (data?.firebase?.created) {
         toast({ 
           title: 'Success', 
           description: `${data.employee.name} has been added! Firebase account created with email: ${data.firebase.email} and password: ${data.firebase.password}`,
@@ -148,14 +165,18 @@ export default function EmployeesPage() {
       } else {
         toast({ 
           title: 'Success', 
-          description: `${data.employee.name} has been added (Firebase account already exists)`,
+          description: `${data.employee.name} has been added. ${data.firebase?.message || 'Firebase account already exists'}`,
         });
       }
       
       setAddDialogOpen(false);
-      setNewEmployee({ name: '', email: '', role: 'Developer', project: '', avatarUrl: '' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to add employee', variant: 'destructive' });
+      setNewEmployee({ name: '', email: '', adrsId: '', role: 'Developer', project: '', avatarUrl: '' });
+    } catch (error: any) {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to add employee', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -169,8 +190,8 @@ export default function EmployeesPage() {
       });
       if (!res.ok) throw new Error('Failed to update');
       const updated = await res.json();
-      setEmployees((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-      toast({ title: 'Success', description: `${updated.name} has been updated` });
+      setEmployees((prev) => Array.isArray(prev) ? prev.map((e) => (e?.id === updated?.id ? updated : e)) : [updated]);
+      toast({ title: 'Success', description: `${updated?.name || 'Employee'} has been updated` });
       setEditDialogOpen(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to update employee', variant: 'destructive' });
@@ -179,10 +200,10 @@ export default function EmployeesPage() {
 
   const handleDeleteEmployee = async (employee: Employee) => {
     try {
-      const res = await fetch(`/api/employees/${employee.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/employees/${employee?.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
-      setEmployees((prev) => prev.filter((e) => e.id !== employee.id));
-      toast({ title: 'Deleted', description: `${employee.name} has been removed`, variant: 'destructive' });
+      setEmployees((prev) => Array.isArray(prev) ? prev.filter((e) => e?.id !== employee?.id) : []);
+      toast({ title: 'Deleted', description: `${employee?.name || 'Employee'} has been removed`, variant: 'destructive' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete employee', variant: 'destructive' });
     }
@@ -198,7 +219,7 @@ export default function EmployeesPage() {
       });
       if (!res.ok) throw new Error('Failed to assign');
       const updated = await res.json();
-      setEmployees((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+      setEmployees((prev) => Array.isArray(prev) ? prev.map((e) => (e?.id === updated?.id ? updated : e)) : [updated]);
       toast({ title: 'Success', description: `Assigned to ${selectedProject}` });
       setAssignDialogOpen(false);
     } catch (error) {
@@ -210,7 +231,7 @@ export default function EmployeesPage() {
     try {
       const res = await fetch(`/api/projects/${encodeURIComponent(projectName)}/team`);
       const team = await res.json();
-      setSelectedTeam(team);
+      setSelectedTeam(Array.isArray(team) ? team : []);
       setSelectedProject(projectName);
       setTeamDialogOpen(true);
     } catch (error) {
@@ -283,6 +304,7 @@ export default function EmployeesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>ADRS ID</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Project</TableHead>
                 <TableHead>Team</TableHead>
@@ -291,39 +313,49 @@ export default function EmployeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
+              {Array.isArray(filteredEmployees) && filteredEmployees.length > 0 ? filteredEmployees.map((employee) => (
+                <TableRow key={employee?.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={employee.avatarUrl || undefined} alt={employee.name} />
-                        <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={employee?.avatarUrl || undefined} alt={employee?.name || 'Employee'} />
+                        <AvatarFallback>{employee?.name?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        <p className="font-medium">{employee?.name || 'Unknown'}</p>
+                        <p className="text-sm text-muted-foreground">{employee?.email || ''}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={roleColors[employee.role]}>
-                      {employee.role}
+                    {employee?.adrsId ? (
+                      <code className="text-sm bg-primary/10 text-primary px-2 py-1 rounded font-mono">
+                        {employee.adrsId}
+                      </code>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Not set</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={roleColors[employee?.role || 'Developer']}>
+                      {employee?.role || 'Developer'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{employee.project}</Badge>
+                    <Badge variant="secondary">{employee?.project || 'No Project'}</Badge>
                   </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => viewProjectTeam(employee.project)}
+                      onClick={() => viewProjectTeam(employee?.project || '')}
+                      disabled={!employee?.project}
                     >
                       <Users className="h-4 w-4 mr-1" />
                       View Team
                     </Button>
                   </TableCell>
-                  <TableCell>{new Date(employee.enrollmentDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{employee?.enrollmentDate ? new Date(employee.enrollmentDate).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -332,7 +364,7 @@ export default function EmployeesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setSelectedProject(employee.project); setAssignDialogOpen(true); }}>
+                        <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setSelectedProject(employee?.project || ''); setAssignDialogOpen(true); }}>
                           <FolderKanban className="mr-2 h-4 w-4" />Assign Project
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setSelectedEmployee({ ...employee }); setEditDialogOpen(true); }}>
@@ -341,7 +373,7 @@ export default function EmployeesPage() {
                         <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setDetailsDialogOpen(true); }}>
                           <FileText className="mr-2 h-4 w-4" />View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.location.href = `/employees/${employee.id}/leave-quota`}>
+                        <DropdownMenuItem onClick={() => window.location.href = `/employees/${employee?.id}/leave-quota`}>
                           <Users className="mr-2 h-4 w-4" />Manage Leave Quotas
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -352,7 +384,13 @@ export default function EmployeesPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No employees found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -397,6 +435,15 @@ export default function EmployeesPage() {
               />
             </div>
             <div className="grid gap-2">
+              <Label>ADRS ID (Optional)</Label>
+              <Input
+                placeholder="ADRS-001"
+                value={newEmployee.adrsId}
+                onChange={(e) => setNewEmployee((prev) => ({ ...prev, adrsId: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">Unique employee identifier for ADRS</p>
+            </div>
+            <div className="grid gap-2">
               <Label>Role</Label>
               <Select value={newEmployee.role} onValueChange={(v) => setNewEmployee((prev) => ({ ...prev, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -410,7 +457,9 @@ export default function EmployeesPage() {
               <Select value={newEmployee.project} onValueChange={(v) => setNewEmployee((prev) => ({ ...prev, project: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                 <SelectContent>
-                  {projects.map((proj) => (<SelectItem key={proj.id} value={proj.name}>{proj.name}</SelectItem>))}
+                  {Array.isArray(projects) && projects.length > 0 ? projects.map((proj) => (<SelectItem key={proj.id} value={proj.name}>{proj.name}</SelectItem>)) : (
+                    <SelectItem value="no-projects" disabled>No projects available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -451,6 +500,14 @@ export default function EmployeesPage() {
               <Input value={selectedEmployee?.email || ''} onChange={(e) => setSelectedEmployee((prev) => prev ? { ...prev, email: e.target.value } : null)} />
             </div>
             <div className="grid gap-2">
+              <Label>ADRS ID</Label>
+              <Input 
+                value={selectedEmployee?.adrsId || ''} 
+                onChange={(e) => setSelectedEmployee((prev) => prev ? { ...prev, adrsId: e.target.value } : null)} 
+                placeholder="ADRS-001"
+              />
+            </div>
+            <div className="grid gap-2">
               <Label>Role</Label>
               <Select value={selectedEmployee?.role} onValueChange={(v) => setSelectedEmployee((prev) => prev ? { ...prev, role: v as Employee['role'] } : null)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -478,7 +535,9 @@ export default function EmployeesPage() {
             <Select value={selectedProject} onValueChange={setSelectedProject}>
               <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
               <SelectContent>
-                {projects.map((proj) => (<SelectItem key={proj.id} value={proj.name}>{proj.name}</SelectItem>))}
+                {Array.isArray(projects) && projects.length > 0 ? projects.map((proj) => (<SelectItem key={proj?.id} value={proj?.name || ''}>{proj?.name || 'Unnamed'}</SelectItem>)) : (
+                  <SelectItem value="no-projects" disabled>No projects available</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -523,19 +582,21 @@ export default function EmployeesPage() {
             <DialogDescription>{selectedTeam.length} team members</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-[300px] overflow-y-auto">
-            {selectedTeam.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+            {Array.isArray(selectedTeam) && selectedTeam.length > 0 ? selectedTeam.map((member) => (
+              <div key={member?.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={member.avatarUrl || undefined} />
-                  <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={member?.avatarUrl || undefined} />
+                  <AvatarFallback>{member?.name?.charAt(0) || '?'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="font-medium">{member.name}</p>
-                  <p className="text-sm text-muted-foreground">{member.email}</p>
+                  <p className="font-medium">{member?.name || 'Unknown'}</p>
+                  <p className="text-sm text-muted-foreground">{member?.email || ''}</p>
                 </div>
-                <Badge variant="outline" className={roleColors[member.role]}>{member.role}</Badge>
+                <Badge variant="outline" className={roleColors[member?.role || 'Developer']}>{member?.role || 'Developer'}</Badge>
               </div>
-            ))}
+            )) : (
+              <p className="text-center py-4 text-muted-foreground">No team members found</p>
+            )}
           </div>
           <DialogFooter><Button onClick={() => setTeamDialogOpen(false)}>Close</Button></DialogFooter>
         </DialogContent>

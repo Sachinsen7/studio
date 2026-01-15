@@ -38,7 +38,10 @@ export async function GET() {
 // POST - Create new project
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
         const { name, clientName, description, status, startDate, endDate, githubRepo, techStack } = body;
 
         if (!name) {

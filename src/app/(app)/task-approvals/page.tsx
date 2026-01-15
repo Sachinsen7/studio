@@ -53,10 +53,11 @@ export default function TaskApprovalsPage() {
     try {
       const res = await fetch('/api/tasks');
       const data = await res.json();
-      setTasks(data);
+      setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast({ title: 'Error', description: 'Failed to load tasks', variant: 'destructive' });
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function TaskApprovalsPage() {
       if (!res.ok) throw new Error('Failed to update approval');
       
       const updatedTask = await res.json();
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+      setTasks(Array.isArray(tasks) ? tasks.map(t => t.id === taskId ? updatedTask : t) : [updatedTask]);
       
       toast({ 
         title: status === 'Approved' ? 'Task Approved' : 'Task Rejected', 
@@ -87,9 +88,9 @@ export default function TaskApprovalsPage() {
     }
   };
 
-  const pendingTasks = tasks.filter(t => t.approvalStatus === 'Pending');
-  const approvedTasks = tasks.filter(t => t.approvalStatus === 'Approved');
-  const rejectedTasks = tasks.filter(t => t.approvalStatus === 'Rejected');
+  const pendingTasks = Array.isArray(tasks) ? tasks.filter(t => t?.approvalStatus === 'Pending') : [];
+  const approvedTasks = Array.isArray(tasks) ? tasks.filter(t => t?.approvalStatus === 'Approved') : [];
+  const rejectedTasks = Array.isArray(tasks) ? tasks.filter(t => t?.approvalStatus === 'Rejected') : [];
 
   if (loading) {
     return (
@@ -169,12 +170,12 @@ export default function TaskApprovalsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingTasks.map((task) => (
-                  <TableRow key={task.id}>
+                {Array.isArray(pendingTasks) && pendingTasks.length > 0 ? pendingTasks.map((task) => (
+                  <TableRow key={task?.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{task.title}</p>
-                        {task.description && (
+                        <p className="font-medium">{task?.title || 'Untitled'}</p>
+                        {task?.description && (
                           <p className="text-sm text-muted-foreground line-clamp-1">{task.description}</p>
                         )}
                       </div>
@@ -182,23 +183,23 @@ export default function TaskApprovalsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={task.assignee?.avatarUrl} />
-                          <AvatarFallback>{task.assignee?.name.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={task?.assignee?.avatarUrl} />
+                          <AvatarFallback>{task?.assignee?.name?.charAt(0) || '?'}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium">{task.assignee?.name}</p>
-                          <p className="text-xs text-muted-foreground">{task.assignee?.email}</p>
+                          <p className="text-sm font-medium">{task?.assignee?.name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{task?.assignee?.email || ''}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{task.project?.name}</TableCell>
+                    <TableCell>{task?.project?.name || 'No Project'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={cn('text-xs', priorityConfig[task.priority].color)}>
-                        {task.priority}
+                      <Badge variant="outline" className={cn('text-xs', priorityConfig[task?.priority || 'Medium']?.color)}>
+                        {task?.priority || 'Medium'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {task.dueDate ? (
+                      {task?.dueDate ? (
                         <div className="flex items-center gap-1 text-sm">
                           <CalendarIcon className="h-3 w-3" />
                           {format(new Date(task.dueDate), 'MMM dd, yyyy')}
@@ -235,7 +236,13 @@ export default function TaskApprovalsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No pending tasks
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

@@ -8,11 +8,24 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-        const body = await request.json();
+        
+        // Buffer the request body
+        const buffer = await request.arrayBuffer();
+        const body = JSON.parse(new TextDecoder().decode(buffer));
+        
         const { project } = body;
 
         if (!project) {
             return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
+        }
+
+        // Verify the project exists
+        const projectExists = await db.project.findUnique({
+            where: { name: project },
+        });
+
+        if (!projectExists) {
+            return NextResponse.json({ error: 'Project not found' }, { status: 404 });
         }
 
         const employee = await db.employee.update({
