@@ -33,7 +33,7 @@ export async function PUT(
         const buffer = await request.arrayBuffer();
         const body = JSON.parse(new TextDecoder().decode(buffer));
         
-        const { name, email, loginEmail, adrsId, role, project, avatarUrl } = body;
+        const { name, email, loginEmail, adrsId, role, project, projects, avatarUrl, isActive } = body;
 
         // Build update data object with only provided fields
         const updateData: Record<string, any> = {};
@@ -43,7 +43,9 @@ export async function PUT(
         if (adrsId !== undefined) updateData.adrsId = adrsId || null;
         if (role !== undefined) updateData.role = role;
         if (project !== undefined) updateData.project = project;
+        if (projects !== undefined) updateData.projects = projects;
         if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (isActive !== undefined) updateData.isActive = isActive;
 
         const employee = await db.employee.update({
             where: { id },
