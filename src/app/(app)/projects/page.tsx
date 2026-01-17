@@ -206,8 +206,8 @@ export default function ProjectsPage() {
       
       if (!res.ok) throw new Error('Failed to create project');
       
-      const createdProject = await res.json();
-      setProjects([createdProject, ...(Array.isArray(projects) ? projects : [])]);
+      await res.json();
+      await fetchProjects(); // Refresh all projects
       setCreateDialogOpen(false);
       setNewProject({
         name: '', clientName: '', description: '', githubRepo: '', techStack: '',
@@ -231,8 +231,8 @@ export default function ProjectsPage() {
         body: JSON.stringify({ ...newDoc, uploadedBy: 'Admin' }),
       });
       if (!res.ok) throw new Error('Failed to add document');
-      const doc = await res.json();
-      setDocuments([doc, ...(Array.isArray(documents) ? documents : [])]);
+      await res.json();
+      await fetchProjectDetails(selectedProject.name); // Refresh project details
       setAddDocDialogOpen(false);
       setNewDoc({ title: '', type: 'General', fileUrl: '', content: '' });
       toast({ title: 'Success', description: 'Document added successfully' });
@@ -247,7 +247,7 @@ export default function ProjectsPage() {
     if (!selectedProject) return;
     try {
       await fetch(`/api/projects/${encodeURIComponent(selectedProject.name)}/documents/${docId}`, { method: 'DELETE' });
-      setDocuments(Array.isArray(documents) ? documents.filter(d => d?.id !== docId) : []);
+      await fetchProjectDetails(selectedProject.name); // Refresh project details
       toast({ title: 'Success', description: 'Document deleted' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete document', variant: 'destructive' });
@@ -280,8 +280,8 @@ export default function ProjectsPage() {
         }),
       });
       if (!res.ok) throw new Error('Failed to add log');
-      const log = await res.json();
-      setDailyLogs([log, ...(Array.isArray(dailyLogs) ? dailyLogs : [])]);
+      await res.json();
+      await fetchProjectDetails(selectedProject.name); // Refresh project details
       setAddLogDialogOpen(false);
       setNewLog({ summary: '', hoursWorked: '', category: 'General' });
       toast({ title: 'Success', description: 'Daily log added successfully' });
@@ -296,7 +296,7 @@ export default function ProjectsPage() {
     if (!selectedProject) return;
     try {
       await fetch(`/api/projects/${encodeURIComponent(selectedProject.name)}/daily-logs/${logId}`, { method: 'DELETE' });
-      setDailyLogs(Array.isArray(dailyLogs) ? dailyLogs.filter(l => l?.id !== logId) : []);
+      await fetchProjectDetails(selectedProject.name); // Refresh project details
       toast({ title: 'Success', description: 'Log deleted' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete log', variant: 'destructive' });
