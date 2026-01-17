@@ -30,6 +30,8 @@ import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useLoading, LoadingButton, LoadingOverlay } from '@/hooks/use-loading';
+import { useApiClient } from '@/lib/api-client';
 
 type DailyLog = {
     id: string;
@@ -56,12 +58,14 @@ export default function DailyLogsPage() {
     const auth = useAuth();
     const { user } = useUser(auth);
     const { toast } = useToast();
+    const api = useApiClient();
+    const { isLoading } = useLoading();
     const [loading, setLoading] = React.useState(true);
     const [employeeId, setEmployeeId] = React.useState<string | null>(null);
     const [projectName, setProjectName] = React.useState<string>('');
+    const [availableProjects, setAvailableProjects] = React.useState<{id: string, name: string, isPrimary: boolean}[]>([]);
     const [dailyLogs, setDailyLogs] = React.useState<DailyLog[]>([]);
     const [addDialogOpen, setAddDialogOpen] = React.useState(false);
-    const [adding, setAdding] = React.useState(false);
     const [newLog, setNewLog] = React.useState({
         summary: '',
         hoursWorked: '',
@@ -77,7 +81,7 @@ export default function DailyLogsPage() {
             try {
                 console.log('Fetching employee data for email:', user.email);
                 
-                // Use the new /me endpoint for better performance
+                // Use the new /me endpoint
                 const empRes = await fetch(`/api/employees/me?email=${encodeURIComponent(user.email)}`);
                 console.log('Employee response status:', empRes.status);
                 
@@ -87,79 +91,124 @@ export default function DailyLogsPage() {
                     return;
                 }
                 
-                const currentEmployee = await empRes.json();
-                console.log('Current employee data:', currentEmployee);
+                const employeeData = await empRes.json();
+                console.log('Employee data:', employeeData);
 
-                if (currentEmployee?.id) {
-                    setEmployeeId(currentEmployee.id);
-                    const projectName = currentEmployee.project || 'Unassigned';
-                    console.log('Setting project name:', projectName);
-                    setProjectName(projectName);
+                if (employeeData?.employee?.id) {
+                    setEmployeeId(employeeData.employee.id);
+                    
+                    // Set available projects
+                    const projects = employeeData.projects || [];
+                    setAvailableProjects(projects.map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        isPrimary: p.isPrimary
+                    })));
+                    
+                    // Get the primary project (where isPrimary is true)
+                    const primaryProject = projects.find((p: any) => p.isPrimary);
+                    const primaryProjectName = primaryProject?.name || employeeData.employee.project || 'Unassigned';
+                    
+                    console.log('Setting project name:', primaryProjectName);
+                    setProjectName(primaryProjectName);
 
-                    if (currentEmployee.project && currentEmployee.project !== 'Unassigned') {
-                        console.log('Fetching logs for project:', currentEmployee.project);
-                        const logsRes = await fetch(`/api/projects/${encodeURIComponent(currentEmployee.project)}/daily-logs?employeeId=${currentEmployee.id}`);
-                        console.log('Logs response status:', logsRes.status);
-                        if (logsRes.ok) {
-                            const logsData = await logsRes.json();
-                            console.log('Logs data:', logsData);
-                            setDailyLogs(Array.isArray(logsData) ? logsData : []);
-                        } else {
-                            console.error('Failed to fetch logs:', await logsRes.text());
-                        }
+                    if (primaryProjectName && primaryProjectName !== 'Unassigned') {
+                        await fetchLogsForProject(primaryProjectName, employeeData.employee.id);
                     } else {
                         console.log('No project assigned or project is Unassigned');
+                        setDailyLogs([]);
                     }
                 } else {
-                    console.log('No employee ID found');
+                    console.log('No employee ID found in response');
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to load your data. Please try refreshing the page.',
+                    variant: 'destructive'
+                });
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, [user?.email]);
+    }, [user?.email, toast]);
+
+    const fetchLogsForProject = async (projectName: string, empId: string) => {
+        try {
+            console.log('Fetching logs for project:', projectName);
+            const logsRes = await fetch(`/api/projects/${encodeURIComponent(projectName)}/daily-logs?employeeId=${empId}`);
+            console.log('Logs response status:', logsRes.status);
+            if (logsRes.ok) {
+                const logsData = await logsRes.json();
+                console.log('Logs data:', logsData);
+                setDailyLogs(Array.isArray(logsData) ? logsData : []);
+            } else {
+                console.error('Failed to fetch logs:', await logsRes.text());
+                setDailyLogs([]);
+            }
+        } catch (error) {
+            console.error('Error fetching logs:', error);
+            setDailyLogs([]);
+        }
+    };
+
+    const handleProjectChange = async (newProjectName: string) => {
+        setProjectName(newProjectName);
+        if (employeeId && newProjectName !== 'Unassigned') {
+            await fetchLogsForProject(newProjectName, employeeId);
+        } else {
+            setDailyLogs([]);
+        }
+    };
 
     const handleAddLog = async () => {
         if (!employeeId || !projectName || projectName === 'Unassigned' || !newLog.summary) {
             toast({ title: 'Error', description: 'Please fill in the summary', variant: 'destructive' });
             return;
         }
-        setAdding(true);
-        try {
-            const res = await fetch(`/api/projects/${encodeURIComponent(projectName)}/daily-logs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    employeeId,
-                    summary: newLog.summary,
-                    hoursWorked: newLog.hoursWorked || null,
-                    category: newLog.category,
-                }),
-            });
-            if (!res.ok) throw new Error('Failed to add log');
-            const log = await res.json();
-            setDailyLogs([log, ...dailyLogs]);
-            setAddDialogOpen(false);
-            setNewLog({ summary: '', hoursWorked: '', category: 'General' });
-            toast({ title: 'Success', description: 'Daily log added successfully' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to add daily log', variant: 'destructive' });
-        } finally {
-            setAdding(false);
-        }
+        
+        const result = await api.post(
+            `/api/projects/${encodeURIComponent(projectName)}/daily-logs`,
+            {
+                employeeId,
+                summary: newLog.summary,
+                hoursWorked: newLog.hoursWorked ? parseFloat(newLog.hoursWorked) : null,
+                category: newLog.category,
+            },
+            {
+                loadingKey: 'add-daily-log',
+                successMessage: 'Daily log added successfully!',
+                showSuccessToast: true,
+                onSuccess: (log) => {
+                    setDailyLogs([log, ...dailyLogs]);
+                    setAddDialogOpen(false);
+                    setNewLog({ summary: '', hoursWorked: '', category: 'General' });
+                }
+            }
+        );
     };
 
     const handleDeleteLog = async (logId: string) => {
         if (!projectName) return;
-        try {
-            await fetch(`/api/projects/${encodeURIComponent(projectName)}/daily-logs/${logId}`, { method: 'DELETE' });
-            setDailyLogs(dailyLogs.filter(l => l.id !== logId));
-            toast({ title: 'Success', description: 'Log deleted' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete log', variant: 'destructive' });
+        
+        const result = await api.delete(
+            `/api/projects/${encodeURIComponent(projectName)}/daily-logs/${logId}`,
+            {
+                loadingKey: `delete-log-${logId}`,
+                successMessage: 'Log deleted successfully!',
+                showSuccessToast: true,
+                onSuccess: () => {
+                    setDailyLogs(dailyLogs.filter(l => l.id !== logId));
+                }
+            }
+        );
+    };
+
+    const refreshLogs = async () => {
+        if (employeeId && projectName && projectName !== 'Unassigned') {
+            await fetchLogsForProject(projectName, employeeId);
         }
     };
 
@@ -186,29 +235,78 @@ export default function DailyLogsPage() {
         );
     }
 
-    if (!projectName || projectName === 'Unassigned') {
+    if (!employeeId) {
         return (
-            <>
+            <LoadingOverlay loading={loading} loadingText="Loading your daily logs...">
                 <PageHeader title="Daily Logs" description="Record your daily work updates." />
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">
                         <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="font-semibold text-lg mb-2">No Project Assigned</h3>
-                        <p className="text-muted-foreground text-sm">You need to be assigned to a project to add daily logs.</p>
-                        <p className="text-xs text-muted-foreground mt-2">Debug: projectName = "{projectName}"</p>
+                        <h3 className="font-semibold text-lg mb-2">Employee Profile Not Found</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                            Your employee profile could not be found. Please contact your administrator.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Current email: <code className="bg-muted px-2 py-1 rounded">{user?.email}</code>
+                        </p>
                     </CardContent>
                 </Card>
-            </>
+            </LoadingOverlay>
+        );
+    }
+
+    if (availableProjects.length === 0) {
+        return (
+            <LoadingOverlay loading={loading} loadingText="Loading your daily logs...">
+                <PageHeader title="Daily Logs" description="Record your daily work updates." />
+                <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-16">
+                        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="font-semibold text-lg mb-2">No Projects Assigned</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                            You need to be assigned to at least one project to create daily logs.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Please contact your administrator to get assigned to a project.
+                        </p>
+                    </CardContent>
+                </Card>
+            </LoadingOverlay>
         );
     }
 
     return (
-        <>
-            <PageHeader title="Daily Logs" description={`Record your daily work updates for ${projectName}`}>
-                <Button onClick={() => setAddDialogOpen(true)}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Log
-                </Button>
+        <LoadingOverlay loading={loading} loadingText="Loading your daily logs...">
+            <PageHeader title="Daily Logs" description={`Record your daily work updates${projectName ? ` for ${projectName}` : ''}`}>
+                <div className="flex gap-2">
+                    {availableProjects.length > 1 && (
+                        <Select value={projectName} onValueChange={handleProjectChange}>
+                            <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Select project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableProjects.map((project) => (
+                                    <SelectItem key={project.id} value={project.name}>
+                                        <div className="flex items-center gap-2">
+                                            {project.name}
+                                            {project.isPrimary && (
+                                                <Badge variant="secondary" className="text-xs">Primary</Badge>
+                                            )}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                    <LoadingButton 
+                        onClick={() => setAddDialogOpen(true)}
+                        loading={isLoading('add-daily-log')}
+                        loadingText="Adding..."
+                    >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Log
+                    </LoadingButton>
+                </div>
             </PageHeader>
 
             {/* Stats */}
@@ -285,9 +383,16 @@ export default function DailyLogsPage() {
                                             </div>
                                             <p className="text-sm">{log.summary || 'No summary'}</p>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDeleteLog(log.id)}>
+                                        <LoadingButton 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="text-red-500 hover:text-red-600" 
+                                            onClick={() => handleDeleteLog(log.id)}
+                                            loading={isLoading(`delete-log-${log.id}`)}
+                                            loadingText=""
+                                        >
                                             <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        </LoadingButton>
                                     </div>
                                 );
                             })}
@@ -297,10 +402,10 @@ export default function DailyLogsPage() {
                             <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                             <h3 className="font-semibold mb-2">No logs yet</h3>
                             <p className="text-sm text-muted-foreground mb-4">Start recording your daily work updates</p>
-                            <Button onClick={() => setAddDialogOpen(true)}>
+                            <LoadingButton onClick={() => setAddDialogOpen(true)}>
                                 <PlusCircle className="h-4 w-4 mr-2" />
                                 Add Your First Log
-                            </Button>
+                            </LoadingButton>
                         </div>
                     )}
                 </CardContent>
@@ -356,13 +461,18 @@ export default function DailyLogsPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddLog} disabled={adding}>
-                            {adding ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
+                        <LoadingButton 
+                            onClick={handleAddLog} 
+                            disabled={!newLog.summary}
+                            loading={isLoading('add-daily-log')}
+                            loadingText="Adding..."
+                        >
+                            <PlusCircle className="h-4 w-4 mr-2" />
                             Add Log
-                        </Button>
+                        </LoadingButton>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </>
+        </LoadingOverlay>
     );
 }

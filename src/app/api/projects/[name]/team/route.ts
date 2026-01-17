@@ -11,7 +11,12 @@ export async function GET(
         const projectName = decodeURIComponent(name);
 
         const teamMembers = await db.employee.findMany({
-            where: { project: projectName },
+            where: {
+                OR: [
+                    { project: projectName }, // Primary project
+                    { projects: { contains: `"${projectName}"` } }, // Member of project (JSON array)
+                ],
+            },
             orderBy: { name: 'asc' },
         });
 

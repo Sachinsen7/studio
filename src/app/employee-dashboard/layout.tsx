@@ -41,6 +41,7 @@ import {
     LifeBuoy,
     FileText,
     Clock,
+    FolderKanban,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { useUser } from '@/firebase/auth/use-user';
@@ -51,6 +52,7 @@ import { NotificationsPanel } from '@/components/notifications-panel';
 
 const employeeNavItems = [
     { href: '/employee-dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { href: '/employee-dashboard/my-projects', label: 'My Projects', icon: FolderKanban },
     { href: '/employee-dashboard/tasks', label: 'My Tasks', icon: ListTodo },
     { href: '/employee-dashboard/daily-logs', label: 'Daily Logs', icon: Clock },
     { href: '/employee-dashboard/my-attendance', label: 'My Attendance', icon: CalendarCheck },

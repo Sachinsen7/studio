@@ -19,7 +19,12 @@ export async function GET() {
         const projectsWithTeams = await Promise.all(
             projects.map(async (project) => {
                 const teamMembers = await db.employee.findMany({
-                    where: { project: project.name },
+                    where: {
+                        OR: [
+                            { project: project.name }, // Primary project
+                            { projects: { contains: `"${project.name}"` } }, // Member of project (JSON array)
+                        ],
+                    },
                 });
                 return {
                     ...project,
