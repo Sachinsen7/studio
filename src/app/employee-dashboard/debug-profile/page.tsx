@@ -76,4 +76,47 @@ export default function DebugProfilePage() {
           {error ? (
             <p className="text-red-500">Error: {error}</p>
           ) : employees.length === 0 ? (
-            <p className="text-muted-foreground">No emp
+            <p className="text-muted-foreground">No employees found</p>
+          ) : (
+            <div className="space-y-4">
+              {employees.map((emp, index) => (
+                <div key={emp.id || index} className="p-4 border rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p><strong>Name:</strong> {emp.name}</p>
+                      <p><strong>Email:</strong> {emp.email}</p>
+                      <p><strong>Login Email:</strong> {emp.loginEmail || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <p><strong>Role:</strong> {emp.role}</p>
+                      <p><strong>Project:</strong> {emp.project || 'Unassigned'}</p>
+                      <p><strong>Projects:</strong> {emp.projects || 'None'}</p>
+                    </div>
+                  </div>
+                  {user?.email && (
+                    <div className="mt-2 p-2 bg-muted rounded">
+                      <p className="text-sm">
+                        <strong>Match Status:</strong>{' '}
+                        {emp.loginEmail === user.email ? (
+                          <span className="text-green-600">✓ Exact match (loginEmail)</span>
+                        ) : emp.email === user.email ? (
+                          <span className="text-blue-600">✓ Exact match (email)</span>
+                        ) : emp.loginEmail?.startsWith(user.email.split('@')[0]) ? (
+                          <span className="text-yellow-600">~ Partial match (prefix)</span>
+                        ) : emp.loginEmail?.includes(user.email.split('@')[0]) ? (
+                          <span className="text-orange-600">~ Contains match</span>
+                        ) : (
+                          <span className="text-red-600">✗ No match</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
