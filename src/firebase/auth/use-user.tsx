@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import {
   Auth,
   User,
@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { FirebaseContext } from '@/firebase/provider';
+import { SessionManager } from './session-manager';
 
 export interface UserAuthHookResult {
   user: User | null;
@@ -31,8 +32,22 @@ export function useUser(auth: Auth): UserAuthHookResult {
   const [error, setError] = useState<Error | null>(null);
   const [role, setRole] = useState<'admin' | 'employee' | null>(null);
   const context = useContext(FirebaseContext);
+  const sessionManagerRef = useRef<SessionManager | null>(null);
 
   const firestore = context?.firestore ?? null;
+
+  // Initialize session manager
+  useEffect(() => {
+    if (!sessionManagerRef.current) {
+      sessionManagerRef.current = new SessionManager(auth);
+    }
+
+    return () => {
+      if (sessionManagerRef.current) {
+        sessionManagerRef.current.stop();
+      }
+    };
+  }, [auth]);
 
   const fetchUserRole = useCallback(async (uid: string, email?: string | null) => {
     if (!firestore) return;
@@ -73,9 +88,19 @@ export function useUser(auth: Auth): UserAuthHookResult {
         if (firebaseUser) {
           setUser(firebaseUser);
           await fetchUserRole(firebaseUser.uid, firebaseUser.email);
+
+          // Start session tracking when user is authenticated
+          if (sessionManagerRef.current) {
+            sessionManagerRef.current.start();
+          }
         } else {
           setUser(null);
           setRole(null);
+
+          // Stop session tracking when user is not authenticated
+          if (sessionManagerRef.current) {
+            sessionManagerRef.current.stop();
+          }
         }
         setLoading(false);
       },
@@ -128,6 +153,10 @@ export function useUser(auth: Auth): UserAuthHookResult {
     setLoading(true);
     setError(null);
     try {
+      // Clear session data before signing out
+      if (sessionManagerRef.current) {
+        sessionManagerRef.current.clearSession();
+      }
       await firebaseSignOut(auth);
     } catch (err) {
       setError(err as Error);
