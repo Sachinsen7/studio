@@ -171,7 +171,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
                     <NotificationsPanel />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                            <Button variant="ghost" className="relative h-9 w-9 rounded-full ">
                                 <Avatar className="h-9 w-9">
                                     <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'user'} />
                                     <AvatarFallback>{user.displayName?.charAt(0) ?? user.email?.charAt(0)}</AvatarFallback>
