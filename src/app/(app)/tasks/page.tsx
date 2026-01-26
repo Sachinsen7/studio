@@ -87,6 +87,25 @@ type Employee = {
   avatarUrl?: string;
 };
 
+type Intern = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  university?: string;
+  status?: string;
+};
+
+type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  type: 'Employee' | 'Intern';
+  role?: string;
+  university?: string;
+};
+
 type Project = {
   id: string;
   name: string;
@@ -184,6 +203,8 @@ function TaskColumn({ title, tasks, onTaskClick }: { title: Task['status']; task
 export default function TasksPage() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [employees, setEmployees] = React.useState<Employee[]>([]);
+  const [interns, setInterns] = React.useState<Intern[]>([]);
+  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([]);
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -204,6 +225,7 @@ export default function TasksPage() {
     dueDate: undefined as Date | undefined,
     status: 'ToDo' as Task['status'],
     assigneeId: '',
+    assigneeType: '' as 'Employee' | 'Intern' | '',
     projectId: '',
   });
   const [creating, setCreating] = React.useState(false);
@@ -217,28 +239,61 @@ export default function TasksPage() {
 
   const fetchData = async () => {
     try {
-      const [tasksRes, employeesRes, projectsRes] = await Promise.all([
+      const [tasksRes, employeesRes, internsRes, projectsRes] = await Promise.all([
         fetch('/api/tasks'),
         fetch('/api/employees'),
+        fetch('/api/interns'),
         fetch('/api/projects'),
       ]);
 
       const tasksData = await tasksRes.json();
       const employeesData = await employeesRes.json();
+      const internsData = await internsRes.json();
       const projectsData = await projectsRes.json();
 
       setTasks(Array.isArray(tasksData) ? tasksData : []);
+      
       // Filter only active employees
       const activeEmployees = Array.isArray(employeesData)
         ? employeesData.filter((emp: any) => emp.isActive !== false)
         : [];
       setEmployees(activeEmployees);
+      
+      // Filter only active interns
+      const activeInterns = Array.isArray(internsData)
+        ? internsData.filter((intern: any) => intern.status === 'Active' || intern.status === 'Upcoming')
+        : [];
+      setInterns(activeInterns);
+      
+      // Combine employees and interns into team members
+      const combinedTeamMembers: TeamMember[] = [
+        ...activeEmployees.map((emp: any) => ({
+          id: emp.id,
+          name: emp.name,
+          email: emp.email,
+          avatarUrl: emp.avatarUrl,
+          type: 'Employee' as const,
+          role: emp.role,
+        })),
+        ...activeInterns.map((intern: any) => ({
+          id: intern.id,
+          name: intern.name,
+          email: intern.email,
+          avatarUrl: intern.avatarUrl,
+          type: 'Intern' as const,
+          university: intern.university,
+        })),
+      ];
+      setTeamMembers(combinedTeamMembers);
+      
       setProjects(Array.isArray(projectsData) ? projectsData : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Error', description: 'Failed to load tasks', variant: 'destructive' });
       setTasks([]);
       setEmployees([]);
+      setInterns([]);
+      setTeamMembers([]);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -246,7 +301,7 @@ export default function TasksPage() {
   };
 
   const handleCreateTask = async () => {
-    if (!newTask.title || !newTask.assigneeId || !newTask.projectId) {
+    if (!newTask.title || !newTask.assigneeId || !newTask.assigneeType || !newTask.projectId) {
       toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
       return;
     }
@@ -274,6 +329,7 @@ export default function TasksPage() {
         dueDate: undefined,
         status: 'ToDo',
         assigneeId: '',
+        assigneeType: '',
         projectId: '',
       });
       toast({ title: 'Success', description: 'Task created successfully' });
@@ -531,17 +587,65 @@ export default function TasksPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Assigned To *</Label>
-                <Select value={newTask.assigneeId} onValueChange={(v) => setNewTask({ ...newTask, assigneeId: v })}>
+                <Select 
+                  value={newTask.assigneeId} 
+                  onValueChange={(v) => {
+                    const selectedMember = teamMembers.find(m => m.id === v);
+                    setNewTask({ 
+                      ...newTask, 
+                      assigneeId: v,
+                      assigneeType: selectedMember?.type || ''
+                    });
+                  }}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
+                    <SelectValue placeholder="Select team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.isArray(employees) && employees.length > 0 ? employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </SelectItem>
-                    )) : (
-                      <SelectItem value="no-employees" disabled>No employees available</SelectItem>
+                    {teamMembers.length > 0 ? (
+                      <>
+                        {/* Group Employees */}
+                        {teamMembers.filter(m => m.type === 'Employee').length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              Employees
+                            </div>
+                            {teamMembers.filter(m => m.type === 'Employee').map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={member.avatarUrl} />
+                                    <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  {member.name} - {member.role}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Group Interns */}
+                        {teamMembers.filter(m => m.type === 'Intern').length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              Interns
+                            </div>
+                            {teamMembers.filter(m => m.type === 'Intern').map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={member.avatarUrl} />
+                                    <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  {member.name} - {member.university || 'Intern'}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <SelectItem value="no-members" disabled>No team members available</SelectItem>
                     )}
                   </SelectContent>
                 </Select>

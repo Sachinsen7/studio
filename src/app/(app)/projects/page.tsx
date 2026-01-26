@@ -415,54 +415,30 @@ export default function ProjectsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Start Date</Label>
-                <Popover modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className={cn(
-                        'justify-start text-left font-normal w-full', 
-                        !newProject.startDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newProject.startDate ? format(newProject.startDate, 'PPP') : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start" side="bottom">
-                    <Calendar 
-                      mode="single" 
-                      selected={newProject.startDate} 
-                      onSelect={(date) => setNewProject({ ...newProject, startDate: date })} 
-                      initialFocus 
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={newProject.startDate ? format(newProject.startDate, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setNewProject({ ...newProject, startDate: date });
+                  }}
+                  className="w-full"
+                />
               </div>
               <div className="grid gap-2">
-                <Label>End Date</Label>
-                <Popover modal={true}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className={cn(
-                        'justify-start text-left font-normal w-full', 
-                        !newProject.endDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newProject.endDate ? format(newProject.endDate, 'PPP') : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start" side="bottom">
-                    <Calendar 
-                      mode="single" 
-                      selected={newProject.endDate} 
-                      onSelect={(date) => setNewProject({ ...newProject, endDate: date })} 
-                      initialFocus 
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={newProject.endDate ? format(newProject.endDate, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setNewProject({ ...newProject, endDate: date });
+                  }}
+                  className="w-full"
+                />
               </div>
             </div>
             <div className="grid gap-2">

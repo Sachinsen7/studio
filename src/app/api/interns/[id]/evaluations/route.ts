@@ -4,11 +4,12 @@ import { db as prisma } from '@/lib/db';
 // GET /api/interns/[id]/evaluations - Get all evaluations for an intern
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const evaluations = await prisma.internEvaluation.findMany({
-            where: { internId: params.id },
+            where: { internId: id },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -25,9 +26,10 @@ export async function GET(
 // POST /api/interns/[id]/evaluations - Create a new evaluation
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const body = await request.json();
         const { mentorId, mentorName, rating, feedback, skills } = body;
 
@@ -49,7 +51,7 @@ export async function POST(
 
         // Verify intern exists
         const intern = await prisma.intern.findUnique({
-            where: { id: params.id },
+            where: { id },
         });
 
         if (!intern) {
@@ -62,7 +64,7 @@ export async function POST(
         // Create evaluation
         const evaluation = await prisma.internEvaluation.create({
             data: {
-                internId: params.id,
+                internId: id,
                 mentorId,
                 mentorName,
                 rating,

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
             },
         });
 
-        // Update status based on dates
+        // Update status based on dates and fetch mentor details
         const now = new Date();
         const updatedInterns = await Promise.all(
             interns.map(async (intern) => {
@@ -71,7 +71,21 @@ export async function GET(request: NextRequest) {
                     }
                 }
 
-                return { ...intern, status: newStatus };
+                // Get mentor details if assigned
+                let mentor = null;
+                if (intern.mentorId) {
+                    mentor = await prisma.employee.findUnique({
+                        where: { id: intern.mentorId },
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    });
+                }
+
+                return { ...intern, status: newStatus, mentor };
             })
         );
 

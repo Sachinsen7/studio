@@ -44,10 +44,13 @@ import {
   FileText,
   FolderKanban,
   CheckSquare,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Logo from '../../components/logo';
+import { NotificationProvider } from '@/contexts/notification-context';
+import { NotificationsPanel } from '@/components/notifications-panel';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -56,6 +59,7 @@ const navItems = [
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/tasks', label: 'Tasks', icon: ListTodo },
   { href: '/task-approvals', label: 'Task Approvals', icon: CheckSquare },
+  { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/attendance', label: 'Attendance', icon: CalendarCheck },
   { href: '/leaves', label: 'Leave Requests', icon: FileText },
   { href: '/summarizer', label: 'Summarizer', icon: BotMessageSquare },
@@ -101,7 +105,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <SidebarProvider>
+    <NotificationProvider>
+      <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
@@ -172,10 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Can add breadcrumbs here */}
           </div>
           <ThemeToggle />
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
-          </Button>
+          <NotificationsPanel />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-auto rounded-full">
@@ -211,5 +213,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </SidebarInset>
     </SidebarProvider>
+    </NotificationProvider>
   );
 }

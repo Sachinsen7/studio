@@ -60,7 +60,7 @@ const employeeFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().email('Invalid email address'),
   adrsId: z.string().optional(),
-  role: z.enum(['Developer', 'Designer', 'Manager', 'QA', 'Admin', 'TeamLead']),
+  role: z.enum(['Developer', 'Designer', 'Manager', 'QA']),
   project: z.string().optional(),
   avatarUrl: z.string().optional(),
 });
@@ -93,11 +93,10 @@ const roleColors: Record<string, string> = {
   Designer: 'bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/20',
   Manager: 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20',
   QA: 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/20',
-  Admin: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  TeamLead: 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+
 };
 
-const roles = ['Developer', 'Designer', 'Manager', 'QA', 'Admin', 'TeamLead'];
+const roles = ['Developer', 'Designer', 'Manager', 'QA'];
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = React.useState<Employee[]>([]);

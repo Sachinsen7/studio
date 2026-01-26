@@ -46,6 +46,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Logo from '../../components/logo';
 import { NotificationsPanel } from '@/components/notifications-panel';
+import { NotificationProvider } from '@/contexts/notification-context';
 
 const employeeNavItems = [
     { href: '/employee-dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -95,7 +96,8 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
     }
 
     return (
-        <SidebarProvider>
+        <NotificationProvider>
+            <SidebarProvider>
             <Sidebar>
                 <SidebarHeader>
                     <div className="flex items-center gap-2 p-2">
@@ -210,5 +212,6 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
                 </main>
             </SidebarInset>
         </SidebarProvider>
+        </NotificationProvider>
     );
 }

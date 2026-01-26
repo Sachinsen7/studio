@@ -45,6 +45,8 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
 import Logo from '../../components/logo';
+import { NotificationProvider } from '@/contexts/notification-context';
+import { NotificationsPanel } from '@/components/notifications-panel';
 
 const internNavItems = [
     { href: '/intern-dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -52,7 +54,6 @@ const internNavItems = [
     { href: '/intern-dashboard/tasks', label: 'My Tasks', icon: ListTodo },
     { href: '/intern-dashboard/daily-logs', label: 'Daily Logs', icon: Clock },
     { href: '/intern-dashboard/evaluations', label: 'Evaluations', icon: Award },
-    { href: '/intern-dashboard/stipend', label: 'Stipend', icon: CalendarCheck },
 ];
 
 export default function InternLayout({ children }: { children: React.ReactNode }) {
@@ -94,7 +95,8 @@ export default function InternLayout({ children }: { children: React.ReactNode }
     }
 
     return (
-        <SidebarProvider>
+        <NotificationProvider>
+            <SidebarProvider>
             <Sidebar>
                 <SidebarHeader>
                     <div className="flex items-center gap-2 p-2">
@@ -170,6 +172,7 @@ export default function InternLayout({ children }: { children: React.ReactNode }
                     <SidebarTrigger className="md:hidden" />
                     <div className="flex-1" />
                     <ThemeToggle />
+                    <NotificationsPanel />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className="relative h-10 w-10 rounded-full p-0 flex items-center justify-center hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -208,5 +211,6 @@ export default function InternLayout({ children }: { children: React.ReactNode }
                 </main>
             </SidebarInset>
         </SidebarProvider>
+        </NotificationProvider>
     );
 }

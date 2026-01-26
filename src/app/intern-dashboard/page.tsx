@@ -8,7 +8,7 @@ import {
     CardTitle,
     CardDescription,
 } from '@/components/ui/card';
-import { ListTodo, CheckCircle2, Award, ArrowUpRight, FolderKanban, Clock, LoaderCircle, DollarSign } from 'lucide-react';
+import { ListTodo, CheckCircle2, Award, ArrowUpRight, FolderKanban, Clock, LoaderCircle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -168,7 +168,7 @@ export default function InternDashboardPage() {
             </PageHeader>
 
             {/* Stats Cards */}
-            <div className="grid gap-6 md:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-3">
                 <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Tasks In Progress</CardTitle>
@@ -203,19 +203,6 @@ export default function InternDashboardPage() {
                     <CardContent>
                         <div className="text-4xl font-bold">{averageRating}</div>
                         <p className="text-xs text-muted-foreground">Out of 5.0</p>
-                    </CardContent>
-                    <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-                        <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                </Card>
-                <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Stipend</CardTitle>
-                        <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold">${internData?.stipendAmount || 0}</div>
-                        <p className="text-xs text-muted-foreground">Monthly stipend</p>
                     </CardContent>
                     <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
                         <ArrowUpRight className="h-4 w-4" />

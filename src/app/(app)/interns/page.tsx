@@ -38,6 +38,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Table,
     TableBody,
@@ -48,9 +49,11 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MoreHorizontal, PlusCircle, FileText, UserCog, Trash2, Search, Users, LoaderCircle, UserX, ImagePlus, GraduationCap, Calendar, DollarSign, Star, XCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileText, UserCog, Trash2, Search, Users, LoaderCircle, UserX, ImagePlus, GraduationCap, Calendar, DollarSign, Star, XCircle, FolderKanban } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { useToast } from '@/hooks/use-toast';
+import { useLoading, LoadingOverlay, LoadingButton } from '@/hooks/use-loading';
+import { useApiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
 // Form validation schema
@@ -128,13 +131,17 @@ export default function InternsPage() {
     const [editDialogOpen, setEditDialogOpen] = React.useState(false);
     const [detailsDialogOpen, setDetailsDialogOpen] = React.useState(false);
     const [terminateDialogOpen, setTerminateDialogOpen] = React.useState(false);
+    const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
     const [terminationReason, setTerminationReason] = React.useState('');
     const [searchQuery, setSearchQuery] = React.useState('');
     const [filterStatus, setFilterStatus] = React.useState<string>('all');
     const [filterProject, setFilterProject] = React.useState<string>('all');
     const [uploadingImage, setUploadingImage] = React.useState(false);
     const [previewImage, setPreviewImage] = React.useState<string>('');
+    const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
     const { toast } = useToast();
+    const { isLoading } = useLoading();
+    const apiClient = useApiClient();
 
     const addForm = useForm<InternFormValues>({
         resolver: zodResolver(internFormSchema),
@@ -230,77 +237,91 @@ export default function InternsPage() {
     };
 
     const handleAddIntern = async (values: InternFormValues) => {
-        try {
-            const res = await fetch('/api/interns', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(values),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                if (data.code === 'DUPLICATE_EMAIL') {
-                    toast({ title: 'Error', description: 'An intern with this email already exists', variant: 'destructive' });
-                } else {
-                    throw new Error(data.error || 'Failed to add intern');
+        const result = await apiClient.post('/api/interns', values, {
+            loadingKey: 'add-intern',
+            successMessage: `${values.name} has been added as an intern`,
+            showSuccessToast: true,
+            onSuccess: async () => {
+                await fetchData();
+                setAddDialogOpen(false);
+                addForm.reset();
+                setPreviewImage('');
+            },
+            onError: (error) => {
+                if (error.includes('email already exists')) {
+                    toast({ 
+                        title: 'Error', 
+                        description: 'An intern with this email already exists', 
+                        variant: 'destructive' 
+                    });
                 }
-                return;
             }
-            await fetchData();
-            toast({ title: 'Success', description: `${data.name} has been added as an intern` });
-            setAddDialogOpen(false);
-            addForm.reset();
-            setPreviewImage('');
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message || 'Failed to add intern', variant: 'destructive' });
-        }
+        });
     };
 
     const handleUpdateIntern = async (values: InternFormValues) => {
         if (!selectedIntern) return;
-        try {
-            const res = await fetch(`/api/interns/${selectedIntern.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(values),
-            });
-            if (!res.ok) throw new Error('Failed to update');
-            const updated = await res.json();
-            await fetchData();
-            toast({ title: 'Success', description: `${updated.name} has been updated` });
-            setEditDialogOpen(false);
-            editForm.reset();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to update intern', variant: 'destructive' });
-        }
+        
+        const result = await apiClient.put(`/api/interns/${selectedIntern.id}`, values, {
+            loadingKey: 'update-intern',
+            successMessage: `${values.name} has been updated`,
+            showSuccessToast: true,
+            onSuccess: async () => {
+                await fetchData();
+                setEditDialogOpen(false);
+                editForm.reset();
+            }
+        });
     };
 
     const handleDeleteIntern = async (intern: Intern) => {
-        try {
-            const res = await fetch(`/api/interns/${intern.id}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error('Failed to delete');
-            setInterns((prev) => prev.filter((i) => i.id !== intern.id));
-            toast({ title: 'Deleted', description: `${intern.name} has been removed`, variant: 'destructive' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete intern', variant: 'destructive' });
-        }
+        const result = await apiClient.delete(`/api/interns/${intern.id}`, {
+            loadingKey: 'delete-intern',
+            successMessage: `${intern.name} has been removed`,
+            showSuccessToast: true,
+            onSuccess: () => {
+                setInterns((prev) => prev.filter((i) => i.id !== intern.id));
+            }
+        });
     };
 
     const handleTerminateInternship = async () => {
         if (!selectedIntern) return;
-        try {
-            const res = await fetch(`/api/interns/${selectedIntern.id}/terminate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: terminationReason }),
-            });
-            if (!res.ok) throw new Error('Failed to terminate');
-            await fetchData();
-            toast({ title: 'Terminated', description: 'Internship has been terminated' });
-            setTerminateDialogOpen(false);
-            setTerminationReason('');
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to terminate internship', variant: 'destructive' });
-        }
+        
+        const result = await apiClient.post(`/api/interns/${selectedIntern.id}/terminate`, 
+            { reason: terminationReason }, 
+            {
+                loadingKey: 'terminate-intern',
+                successMessage: 'Internship has been terminated',
+                showSuccessToast: true,
+                onSuccess: async () => {
+                    await fetchData();
+                    setTerminateDialogOpen(false);
+                    setTerminationReason('');
+                }
+            }
+        );
+    };
+
+    const handleAssignProject = async () => {
+        if (!selectedIntern || selectedProjects.length === 0) return;
+        
+        const result = await apiClient.post(`/api/interns/${selectedIntern.id}/assign-project`, 
+            {
+                projects: selectedProjects,
+                primaryProject: selectedProjects[0], // First selected project becomes primary
+            },
+            {
+                loadingKey: 'assign-project-intern',
+                successMessage: `Assigned to ${selectedProjects.length} project${selectedProjects.length > 1 ? 's' : ''}`,
+                showSuccessToast: true,
+                onSuccess: async () => {
+                    await fetchData();
+                    setAssignDialogOpen(false);
+                    setSelectedProjects([]);
+                }
+            }
+        );
     };
 
     if (loading) {
@@ -455,6 +476,13 @@ export default function InternsPage() {
                                                     setEditDialogOpen(true);
                                                 }}>
                                                     <UserCog className="mr-2 h-4 w-4" />Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => {
+                                                    setSelectedIntern(intern);
+                                                    setSelectedProjects([]);
+                                                    setAssignDialogOpen(true);
+                                                }}>
+                                                    <FolderKanban className="mr-2 h-4 w-4" />Assign Project
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => { setSelectedIntern(intern); setDetailsDialogOpen(true); }}>
                                                     <FileText className="mr-2 h-4 w-4" />View Details
@@ -613,7 +641,13 @@ export default function InternsPage() {
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                                <Button type="submit">Add Intern</Button>
+                                <LoadingButton 
+                                    type="submit" 
+                                    loading={isLoading('add-intern')}
+                                    loadingText="Adding..."
+                                >
+                                    Add Intern
+                                </LoadingButton>
                             </DialogFooter>
                         </form>
                     </Form>
@@ -714,7 +748,13 @@ export default function InternsPage() {
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                                <Button type="submit">Update</Button>
+                                <LoadingButton 
+                                    type="submit" 
+                                    loading={isLoading('update-intern')}
+                                    loadingText="Updating..."
+                                >
+                                    Update
+                                </LoadingButton>
                             </DialogFooter>
                         </form>
                     </Form>
@@ -743,7 +783,14 @@ export default function InternsPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setTerminateDialogOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleTerminateInternship}>Terminate</Button>
+                        <LoadingButton 
+                            variant="destructive" 
+                            onClick={handleTerminateInternship}
+                            loading={isLoading('terminate-intern')}
+                            loadingText="Terminating..."
+                        >
+                            Terminate
+                        </LoadingButton>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -819,6 +866,87 @@ export default function InternsPage() {
                             </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Assign Project Dialog */}
+            <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Assign Projects</DialogTitle>
+                        <DialogDescription>
+                            Select multiple projects for {selectedIntern?.name}. The first selected project will be the primary project.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 relative">
+                        <LoadingOverlay loading={isLoading('assign-project-intern')} loadingText="Assigning projects...">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                {projects.map((project) => {
+                                    const isChecked = selectedProjects.includes(project?.name || '');
+                                    const isPrimary = selectedProjects[0] === project?.name;
+                                    return (
+                                        <div key={project?.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50">
+                                            <Checkbox
+                                                id={project?.id}
+                                                checked={isChecked}
+                                                disabled={isLoading('assign-project-intern')}
+                                                onCheckedChange={(checked) => {
+                                                    const projectName = project?.name || '';
+                                                    if (checked) {
+                                                        setSelectedProjects([...selectedProjects, projectName]);
+                                                    } else {
+                                                        setSelectedProjects(selectedProjects.filter(p => p !== projectName));
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor={project?.id}
+                                                className={cn(
+                                                    "text-sm font-normal cursor-pointer flex-1",
+                                                    isLoading('assign-project-intern') && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {project?.name}
+                                                {isPrimary && (
+                                                    <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>
+                                                )}
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </LoadingOverlay>
+                        {selectedProjects.length > 0 && (
+                            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                                <p className="text-xs text-muted-foreground">
+                                    Selected: {selectedProjects.join(', ')}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Primary project: {selectedProjects[0]}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setAssignDialogOpen(false);
+                                setSelectedProjects([]);
+                            }}
+                            disabled={isLoading('assign-project-intern')}
+                        >
+                            Cancel
+                        </Button>
+                        <LoadingButton
+                            onClick={handleAssignProject}
+                            disabled={selectedProjects.length === 0}
+                            loading={isLoading('assign-project-intern')}
+                            loadingText="Assigning..."
+                        >
+                            Assign {selectedProjects.length > 0 && `(${selectedProjects.length})`}
+                        </LoadingButton>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </>

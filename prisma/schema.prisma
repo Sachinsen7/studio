@@ -248,6 +248,23 @@ model StipendPayment {
   @@map("stipend_payments")
 }
 
+model Notification {
+  id          String               @id @default(cuid())
+  type        NotificationType
+  priority    NotificationPriority @default(medium)
+  title       String
+  message     String
+  userId      String
+  read        Boolean              @default(false)
+  actionUrl   String?
+  actionLabel String?
+  metadata    String?              // JSON string for additional data
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@map("notifications")
+}
+
 enum Role {
   Developer
   Designer
@@ -363,4 +380,21 @@ enum PaymentStatus {
 enum AssigneeType {
   Employee
   Intern
+}
+
+enum NotificationType {
+  leave
+  task
+  attendance
+  general
+  project
+  evaluation
+  system
+}
+
+enum NotificationPriority {
+  low
+  medium
+  high
+  urgent
 }
