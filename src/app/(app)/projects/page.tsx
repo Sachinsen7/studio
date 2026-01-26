@@ -23,6 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -51,6 +52,7 @@ import {
   Clock,
   ExternalLink,
   FileIcon,
+  Check,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -128,6 +130,16 @@ export default function ProjectsPage() {
   const [addLogDialogOpen, setAddLogDialogOpen] = React.useState(false);
   const [newLog, setNewLog] = React.useState({ summary: '', hoursWorked: '', category: 'General' });
   const [addingLog, setAddingLog] = React.useState(false);
+
+  // Delete project dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [projectToDelete, setProjectToDelete] = React.useState<Project | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
+  // Bulk delete functionality
+  const [selectedProjects, setSelectedProjects] = React.useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = React.useState(false);
+  const [bulkDeleting, setBulkDeleting] = React.useState(false);
 
   const [newProject, setNewProject] = React.useState({
     name: '',
@@ -303,6 +315,113 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+    
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete project');
+      }
+      
+      const result = await res.json();
+      
+      // Close dialogs and refresh projects
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+      if (selectedProject?.id === projectToDelete.id) {
+        setSelectedProject(null);
+      }
+      
+      await fetchProjects(); // Refresh projects list
+      
+      toast({ 
+        title: 'Success', 
+        description: `Project "${projectToDelete.name}" deleted successfully. ${result.deletedProject?.affectedEmployees || 0} employees and ${result.deletedProject?.affectedInterns || 0} interns were notified.`
+      });
+    } catch (error: any) {
+      console.error('Error deleting project:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete project', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProjects.size === 0) return;
+    
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('/api/projects/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectIds: Array.from(selectedProjects) }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete projects');
+      }
+      
+      const result = await res.json();
+      
+      // Close dialog and clear selection
+      setBulkDeleteDialogOpen(false);
+      setSelectedProjects(new Set());
+      setSelectedProject(null);
+      
+      await fetchProjects(); // Refresh projects list
+      
+      toast({ 
+        title: 'Bulk Delete Complete', 
+        description: `${result.summary?.successful || 0} projects deleted successfully. ${result.summary?.affectedEmployees || 0} employees and ${result.summary?.affectedInterns || 0} interns were notified.`
+      });
+    } catch (error: any) {
+      console.error('Error bulk deleting projects:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete projects', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleProjectSelection = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newSelection = new Set(selectedProjects);
+    if (newSelection.has(projectId)) {
+      newSelection.delete(projectId);
+    } else {
+      newSelection.add(projectId);
+    }
+    setSelectedProjects(newSelection);
+  };
+
+  const selectAllProjects = () => {
+    if (selectedProjects.size === projects.length) {
+      setSelectedProjects(new Set());
+    } else {
+      setSelectedProjects(new Set(projects.map(p => p.id)));
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -314,28 +433,83 @@ export default function ProjectsPage() {
   return (
     <>
       <PageHeader title="Projects" description="Manage and track all your projects.">
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          New Project
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedProjects.size > 0 && (
+            <>
+              <Button variant="outline" onClick={() => setSelectedProjects(new Set())}>
+                Clear Selection ({selectedProjects.size})
+              </Button>
+              <Button variant="destructive" onClick={() => setBulkDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            </>
+          )}
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </div>
       </PageHeader>
+
+      {/* Bulk Selection Controls */}
+      {projects.length > 0 && (
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedProjects.size === projects.length}
+              onCheckedChange={selectAllProjects}
+            />
+            <label htmlFor="select-all" className="text-sm font-medium">
+              Select All ({projects.length} projects)
+            </label>
+          </div>
+          {selectedProjects.size > 0 && (
+            <Badge variant="secondary">
+              {selectedProjects.size} selected
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Projects Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.isArray(projects) && projects.length > 0 ? projects.map((project) => {
           const StatusIcon = statusConfig[project?.status || 'OnTrack']?.icon || statusConfig.OnTrack.icon;
           return (
-            <Card key={project?.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleSelectProject(project)}>
+            <Card key={project?.id} className={cn(
+              "hover:shadow-lg transition-shadow cursor-pointer group",
+              selectedProjects.has(project?.id) && "ring-2 ring-primary"
+            )} onClick={() => handleSelectProject(project)}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{project?.name || 'Untitled'}</CardTitle>
-                    {project?.clientName && <CardDescription className="mt-1">{project.clientName}</CardDescription>}
+                  <div className="flex items-start gap-3 flex-1">
+                    <Checkbox
+                      checked={selectedProjects.has(project?.id)}
+                      onCheckedChange={(checked) => toggleProjectSelection(project?.id, {} as React.MouseEvent)}
+                      onClick={(e) => toggleProjectSelection(project?.id, e)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{project?.name || 'Untitled'}</CardTitle>
+                      {project?.clientName && <CardDescription className="mt-1">{project.clientName}</CardDescription>}
+                    </div>
                   </div>
-                  <Badge variant="outline" className={cn('text-xs', statusConfig[project?.status || 'OnTrack']?.color)}>
-                    <StatusIcon className="h-3 w-3 mr-1" />
-                    {statusConfig[project?.status || 'OnTrack']?.label}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={cn('text-xs', statusConfig[project?.status || 'OnTrack']?.color)}>
+                      <StatusIcon className="h-3 w-3 mr-1" />
+                      {statusConfig[project?.status || 'OnTrack']?.label}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => openDeleteDialog(project, e)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -744,6 +918,68 @@ export default function ProjectsPage() {
             <Button onClick={handleAddLog} disabled={addingLog}>
               {addingLog ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
               Add Log
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Project Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+              <br /><br />
+              <strong>This will permanently delete:</strong>
+              <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                <li>All tasks and task submissions</li>
+                <li>All daily logs</li>
+                <li>All project documents</li>
+                <li>All project assignments</li>
+              </ul>
+              <br />
+              <strong>Affected users will be notified and unassigned from this project.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteProject} disabled={deleting}>
+              {deleting ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Multiple Projects</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedProjects.size} project(s)? This action cannot be undone.
+              <br /><br />
+              <strong>This will permanently delete for each project:</strong>
+              <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                <li>All tasks and task submissions</li>
+                <li>All daily logs</li>
+                <li>All project documents</li>
+                <li>All project assignments</li>
+              </ul>
+              <br />
+              <strong>All affected users will be notified and unassigned from these projects.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeleteDialogOpen(false)} disabled={bulkDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+              {bulkDeleting ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Delete {selectedProjects.size} Projects
             </Button>
           </DialogFooter>
         </DialogContent>
