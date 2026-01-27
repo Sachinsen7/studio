@@ -191,27 +191,63 @@ export async function POST(request: NextRequest) {
         const defaultPassword = `${firstName}@123`;
         const hashedPassword = await hashPassword(defaultPassword);
 
-        // Create User account for authentication
-        await prisma.user.create({
-            data: {
-                email: email,
-                name: name,
-                passwordHash: hashedPassword,
-                role: UserRole.intern,
-                internId: intern.id,
-            },
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({
+            where: { email: email }
         });
 
-        return NextResponse.json({
-            intern,
-            credentials: {
+        let userCredentials = null;
+
+        if (!existingUser) {
+            // Create User account for authentication
+            await prisma.user.create({
+                data: {
+                    email: email,
+                    name: name,
+                    passwordHash: hashedPassword,
+                    role: UserRole.intern,
+                    internId: intern.id,
+                },
+            });
+
+            userCredentials = {
                 email: email,
                 password: defaultPassword,
                 message: `User account created. Login with email: ${email} and password: ${defaultPassword}`,
-            }
+            };
+        } else {
+            // Update existing user to link with intern
+            await prisma.user.update({
+                where: { email: email },
+                data: {
+                    internId: intern.id,
+                    role: UserRole.intern,
+                },
+            });
+
+            userCredentials = {
+                email: email,
+                message: `Existing user account linked to intern profile. Use existing login credentials.`,
+            };
+        }
+
+        return NextResponse.json({
+            intern,
+            credentials: userCredentials,
         }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating intern:', error);
+        
+        // Handle specific Prisma errors
+        if (error.code === 'P2002') {
+            // Unique constraint violation
+            const field = error.meta?.target?.[0] || 'field';
+            return NextResponse.json(
+                { error: `An intern with this ${field} already exists` },
+                { status: 409 }
+            );
+        }
+        
         return NextResponse.json(
             { error: 'Failed to create intern' },
             { status: 500 }

@@ -55,25 +55,16 @@ import { PageHeader } from '@/components/page-header';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// Form validation schema
-const employeeFormSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
-  email: z.string().email('Invalid email address'),
-  adrsId: z.string().optional(),
-  role: z.enum(['Developer', 'Designer', 'Manager', 'QA']),
-  project: z.string().optional(),
-  avatarUrl: z.string().optional(),
-});
-
-type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
+import { employeeFormSchema, type EmployeeFormValues } from '@/lib/form-validation';
 
 type Employee = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
   adrsId?: string | null;
   avatarUrl: string | null;
-  role: 'Developer' | 'Designer' | 'Manager' | 'QA';
+  role: 'Developer' | 'Designer' | 'Manager' | 'QA' | 'Admin' | 'TeamLead';
   project: string;
   projects?: string | null;
   isActive?: boolean;
@@ -582,6 +573,7 @@ export default function EmployeesPage() {
                           editForm.reset({
                             name: employee.name,
                             email: employee.email,
+                            phone: employee.phone || '',
                             adrsId: employee.adrsId || '',
                             role: employee.role,
                             avatarUrl: employee.avatarUrl || '',
@@ -716,6 +708,22 @@ export default function EmployeesPage() {
                         <FormControl>
                           <Input type="email" placeholder="email@adrs.com" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Phone */}
+                  <FormField
+                    control={addForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">Include country code (optional)</p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -891,6 +899,22 @@ export default function EmployeesPage() {
                         <FormControl>
                           <Input type="email" placeholder="email@adrs.com" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Phone */}
+                  <FormField
+                    control={editForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">Include country code (optional)</p>
                         <FormMessage />
                       </FormItem>
                     )}

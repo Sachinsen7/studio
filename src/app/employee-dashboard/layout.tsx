@@ -41,6 +41,7 @@ import {
     Clock,
     FolderKanban,
     KeyRound,
+    Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -52,6 +53,7 @@ const employeeNavItems = [
     { href: '/employee-dashboard', label: 'Dashboard', icon: LayoutGrid },
     { href: '/employee-dashboard/my-projects', label: 'My Projects', icon: FolderKanban },
     { href: '/employee-dashboard/tasks', label: 'My Tasks', icon: ListTodo },
+    { href: '/employee-dashboard/my-interns', label: 'My Interns', icon: Users },
     { href: '/employee-dashboard/daily-logs', label: 'Daily Logs', icon: Clock },
     { href: '/employee-dashboard/my-attendance', label: 'My Attendance', icon: CalendarCheck },
     { href: '/employee-dashboard/my-leaves', label: 'My Leaves', icon: FileText },

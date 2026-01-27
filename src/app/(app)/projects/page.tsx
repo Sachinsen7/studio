@@ -58,6 +58,8 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+import { projectFormSchema, type ProjectFormValues } from '@/lib/form-validation';
+
 type Project = {
   id: string;
   name: string;

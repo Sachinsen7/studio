@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         const buffer = await request.arrayBuffer();
         const body = JSON.parse(new TextDecoder().decode(buffer));
 
-        const { name, email, adrsId, role, project, avatarUrl } = body;
+        const { name, email, phone, adrsId, role, project, avatarUrl } = body;
 
         if (!name || !email || !role) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
             data: {
                 name,
                 email: personalEmail,
+                phone: phone || null,
                 adrsId: adrsId || null,
                 role,
                 project: project || 'Unassigned',

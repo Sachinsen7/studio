@@ -56,21 +56,7 @@ import { useLoading, LoadingOverlay, LoadingButton } from '@/hooks/use-loading';
 import { useApiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
-// Form validation schema
-const internFormSchema = z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Invalid email address'),
-    phone: z.string().optional(),
-    university: z.string().optional(),
-    degree: z.string().optional(),
-    startDate: z.string().min(1, 'Start date is required'),
-    endDate: z.string().optional(),
-    mentorId: z.string().optional(),
-    project: z.string().optional(),
-    avatarUrl: z.string().optional(),
-});
-
-type InternFormValues = z.infer<typeof internFormSchema>;
+import { internFormSchema, type InternFormValues } from '@/lib/form-validation';
 
 type Intern = {
     id: string;

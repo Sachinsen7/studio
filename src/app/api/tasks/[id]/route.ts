@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { createNotification } from '@/lib/notification-utils';
 
-// GET single task
+// GET /api/tasks/[id] - Get a specific task
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -13,57 +14,101 @@ export async function GET(
             where: { id },
             include: {
                 assignee: true,
+                intern: true,
                 project: true,
                 submissions: true,
             },
         });
 
         if (!task) {
-            return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: 'Task not found' },
+                { status: 404 }
+            );
         }
 
         return NextResponse.json(task);
     } catch (error) {
         console.error('Error fetching task:', error);
-        return NextResponse.json({ error: 'Failed to fetch task' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch task' },
+            { status: 500 }
+        );
     }
 }
 
-// PUT - Update task
-export async function PUT(
+// PATCH /api/tasks/[id] - Update a task
+export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { id } = await params;
         const body = await request.json();
-        const { status, priority, title, description, dueDate } = body;
 
-        const updateData: any = {};
-        if (status !== undefined) updateData.status = status;
-        if (priority !== undefined) updateData.priority = priority;
-        if (title !== undefined) updateData.title = title;
-        if (description !== undefined) updateData.description = description;
-        if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
-
-        const task = await db.task.update({
+        // Get the current task to check permissions and status
+        const currentTask = await db.task.findUnique({
             where: { id },
-            data: updateData,
             include: {
                 assignee: true,
+                intern: true,
+                project: true,
+            },
+        });
+
+        if (!currentTask) {
+            return NextResponse.json(
+                { error: 'Task not found' },
+                { status: 404 }
+            );
+        }
+
+        // Update the task
+        const updatedTask = await db.task.update({
+            where: { id },
+            data: {
+                ...body,
+                updatedAt: new Date(),
+            },
+            include: {
+                assignee: true,
+                intern: true,
                 project: true,
                 submissions: true,
             },
         });
 
-        return NextResponse.json(task);
+        // Create notification if status changed to Done
+        if (body.status === 'Done' && currentTask.status !== 'Done') {
+            // Notify mentor/team lead about task completion
+            if (currentTask.internId && currentTask.intern?.mentorId) {
+                await createNotification({
+                    type: 'task_completed',
+                    priority: 'medium',
+                    title: 'Task Completed',
+                    message: `${currentTask.intern.name} has completed the task "${currentTask.title}"`,
+                    userId: currentTask.intern.mentorId,
+                    actionUrl: '/employee-dashboard/my-interns',
+                    actionLabel: 'Review Task',
+                    metadata: JSON.stringify({
+                        taskId: currentTask.id,
+                        internId: currentTask.internId,
+                    }),
+                });
+            }
+        }
+
+        return NextResponse.json(updatedTask);
     } catch (error) {
         console.error('Error updating task:', error);
-        return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to update task' },
+            { status: 500 }
+        );
     }
 }
 
-// DELETE task
+// DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -71,6 +116,19 @@ export async function DELETE(
     try {
         const { id } = await params;
 
+        // Check if task exists
+        const task = await db.task.findUnique({
+            where: { id },
+        });
+
+        if (!task) {
+            return NextResponse.json(
+                { error: 'Task not found' },
+                { status: 404 }
+            );
+        }
+
+        // Delete the task (cascade will handle related records)
         await db.task.delete({
             where: { id },
         });
@@ -78,6 +136,9 @@ export async function DELETE(
         return NextResponse.json({ message: 'Task deleted successfully' });
     } catch (error) {
         console.error('Error deleting task:', error);
-        return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to delete task' },
+            { status: 500 }
+        );
     }
 }

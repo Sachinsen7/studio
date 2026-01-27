@@ -28,6 +28,7 @@ model Employee {
   id                  String            @id @default(cuid())
   name                String
   email               String            @unique  // Personal/contact email (e.g., sparshsahu8435@gmail.com)
+  phone               String?           // Phone number
   loginEmail          String?           @unique  // Firebase login email (e.g., sapeksh@adrs.com)
   adrsId              String?           @unique  // ADRS Employee ID (manually assigned)
   avatarUrl           String?
@@ -286,6 +287,8 @@ enum ProjectStatus {
 }
 
 enum ProjectType {
+  Company
+  EmployeeSpecific
   Product
   Project
 }

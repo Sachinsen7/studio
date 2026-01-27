@@ -33,12 +33,13 @@ export async function PUT(
         const buffer = await request.arrayBuffer();
         const body = JSON.parse(new TextDecoder().decode(buffer));
         
-        const { name, email, loginEmail, adrsId, role, project, projects, avatarUrl, isActive } = body;
+        const { name, email, phone, loginEmail, adrsId, role, project, projects, avatarUrl, isActive } = body;
 
         // Build update data object with only provided fields
         const updateData: Record<string, any> = {};
         if (name !== undefined) updateData.name = name;
         if (email !== undefined) updateData.email = email;
+        if (phone !== undefined) updateData.phone = phone;
         if (loginEmail !== undefined) updateData.loginEmail = loginEmail || null;
         if (adrsId !== undefined) updateData.adrsId = adrsId || null;
         if (role !== undefined) updateData.role = role;

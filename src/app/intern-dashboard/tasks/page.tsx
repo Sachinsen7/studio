@@ -17,6 +17,10 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Star,
+  MessageSquare,
+  TrendingUp,
+  Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -30,6 +34,9 @@ type Task = {
   dueDate?: string;
   projectId: string;
   project?: { id: string; name: string };
+  rating?: number;
+  feedback?: string;
+  ratedAt?: string;
   createdAt: string;
 };
 
@@ -57,13 +64,57 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (taskI
         <div className="flex-1 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <p className="font-medium leading-snug">{task.title}</p>
-            <Badge variant="outline" className={cn('font-normal text-xs', priorityConf.color)}>
-              {task.priority}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={cn('font-normal text-xs', priorityConf.color)}>
+                {task.priority}
+              </Badge>
+              {task.rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs font-medium">{task.rating}/5</span>
+                </div>
+              )}
+            </div>
           </div>
           {task.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
           )}
+          
+          {/* Rating and Feedback Section */}
+          {task.status === 'Done' && task.rating && (
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm font-medium">Performance Rating</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-3 w-3",
+                        i < (task.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                      )}
+                    />
+                  ))}
+                  <span className="text-sm font-medium ml-1">{task.rating}/5</span>
+                </div>
+              </div>
+              {task.feedback && (
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">{task.feedback}</p>
+                </div>
+              )}
+              {task.ratedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Rated on {format(new Date(task.ratedAt), 'MMM dd, yyyy')}
+                </p>
+              )}
+            </div>
+          )}
+          
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <Badge variant="outline" className="font-normal">{task.project?.name}</Badge>
             {task.dueDate && (
@@ -74,7 +125,7 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (taskI
             )}
           </div>
           <div className="flex gap-2 pt-2">
-            {task.status !== 'InProgress' && (
+            {task.status !== 'InProgress' && task.status !== 'Done' && (
               <Button
                 size="sm"
                 variant="outline"
@@ -98,6 +149,222 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (taskI
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export default function InternTasksPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const apiClient = useApiClient();
+  const { isLoading } = useLoading();
+  const [loading, setLoading] = React.useState(true);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [internId, setInternId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [user?.email]);
+
+  const fetchData = async () => {
+    if (!user?.email) return;
+
+    try {
+      // Get intern data
+      const internRes = await fetch(`/api/interns?email=${encodeURIComponent(user.email)}`);
+      if (!internRes.ok) {
+        setLoading(false);
+        return;
+      }
+
+      const interns = await internRes.json();
+      const currentIntern = Array.isArray(interns) ? interns.find((i: any) => i.email === user.email) : null;
+
+      if (!currentIntern) {
+        setLoading(false);
+        return;
+      }
+
+      setInternId(currentIntern.id);
+
+      // Fetch tasks assigned to this intern
+      const tasksRes = await fetch(`/api/tasks?assigneeId=${currentIntern.id}&assigneeType=Intern`);
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTasks(Array.isArray(tasksData) ? tasksData : []);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load tasks',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update task status');
+
+      // Refresh tasks
+      await fetchData();
+      
+      toast({
+        title: 'Success',
+        description: `Task status updated to ${newStatus}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update task status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getTaskStats = () => {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'Done').length;
+    const inProgress = tasks.filter(t => t.status === 'InProgress').length;
+    const todo = tasks.filter(t => t.status === 'ToDo').length;
+    const rated = tasks.filter(t => t.rating !== null && t.rating !== undefined).length;
+    const avgRating = rated > 0 
+      ? tasks.filter(t => t.rating).reduce((sum, t) => sum + (t.rating || 0), 0) / rated 
+      : 0;
+
+    return { total, completed, inProgress, todo, rated, avgRating };
+  };
+
+  const stats = getTaskStats();
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="My Tasks"
+        description="Track your assigned tasks and performance ratings"
+      />
+
+      {/* Performance Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">Total Tasks</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">Completed</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-600">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground">In Progress</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-600">{stats.todo}</div>
+            <p className="text-xs text-muted-foreground">To Do</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span className="text-2xl font-bold text-yellow-600">
+                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '—'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">Avg Rating</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tasks by Status */}
+      <div className="space-y-6">
+        {/* To Do Tasks */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-red-500" />
+            To Do ({tasks.filter(t => t.status === 'ToDo').length})
+          </h3>
+          <div className="space-y-3">
+            {tasks.filter(t => t.status === 'ToDo').map(task => (
+              <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+            ))}
+            {tasks.filter(t => t.status === 'ToDo').length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No pending tasks</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* In Progress Tasks */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-yellow-500" />
+            In Progress ({tasks.filter(t => t.status === 'InProgress').length})
+          </h3>
+          <div className="space-y-3">
+            {tasks.filter(t => t.status === 'InProgress').map(task => (
+              <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+            ))}
+            {tasks.filter(t => t.status === 'InProgress').length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No tasks in progress</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Completed Tasks */}
+        <div>
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            Completed ({tasks.filter(t => t.status === 'Done').length})
+          </h3>
+          <div className="space-y-3">
+            {tasks.filter(t => t.status === 'Done').map(task => (
+              <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+            ))}
+            {tasks.filter(t => t.status === 'Done').length === 0 && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No completed tasks yet</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
