@@ -34,6 +34,7 @@ model Employee {
   role                Role              @default(Developer)
   project             String            @default("Unassigned")  // Primary project (kept for backward compatibility)
   projects            String?           // JSON array of project names ["Project1", "Project2"]
+  teamLeadProjects    String?           // JSON array of project names where this employee is team lead ["Project1", "Project2"]
   isActive            Boolean           @default(true)  // Employee active/deactivated status
   enrollmentDate      DateTime          @default(now())
   casualLeaveQuota    Int               @default(1)
@@ -64,7 +65,7 @@ model Project {
   description String?
   techStack   String?
   githubRepo  String?
-  projectType ProjectType       @default(Company)
+  projectType ProjectType       @default(Project)
   assignedTo  String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
@@ -124,6 +125,10 @@ model Task {
   assigneeType   AssigneeType       @default(Employee) // Employee or Intern
   internId       String?            // Intern ID (nullable for employee assignments)
   projectId      String
+  rating         Int?               // Task rating from mentor (1-5 scale)
+  feedback       String?            // Feedback from mentor on task completion
+  ratedBy        String?            // ID of the mentor who rated the task
+  ratedAt        DateTime?          // When the task was rated
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   assignments    TaskAssignment[]
@@ -281,8 +286,8 @@ enum ProjectStatus {
 }
 
 enum ProjectType {
-  Company
-  EmployeeSpecific
+  Product
+  Project
 }
 
 enum DocumentType {

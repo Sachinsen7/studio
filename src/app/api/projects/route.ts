@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         const buffer = await request.arrayBuffer();
         const body = JSON.parse(new TextDecoder().decode(buffer));
         
-        const { name, clientName, description, status, startDate, endDate, githubRepo, techStack } = body;
+        const { name, clientName, description, status, startDate, endDate, githubRepo, techStack, projectType } = body;
 
         if (!name) {
             return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
                 endDate: endDate ? new Date(endDate) : null,
                 githubRepo,
                 techStack,
+                projectType: projectType || 'Project', // Default to 'Project'
                 progress: 0,
             },
             include: {

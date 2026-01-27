@@ -89,7 +89,8 @@ export async function PUT(
             endDate, 
             githubRepo, 
             techStack,
-            progress 
+            progress,
+            projectType
         } = body;
 
         // Check if project exists
@@ -117,6 +118,7 @@ export async function PUT(
                 githubRepo,
                 techStack,
                 progress: progress !== undefined ? progress : existingProject.progress,
+                projectType: projectType || existingProject.projectType,
             },
             include: {
                 tasks: true,

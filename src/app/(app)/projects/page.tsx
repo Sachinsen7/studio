@@ -53,6 +53,7 @@ import {
   ExternalLink,
   FileIcon,
   Check,
+  Edit,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ type Project = {
   description?: string;
   githubRepo?: string;
   techStack?: string;
+  projectType?: 'Product' | 'Project';
   team?: { id: string; name: string; email: string; avatarUrl?: string; role: string }[];
   tasks?: { id: string; title: string; status: string }[];
   createdAt: string;
@@ -141,6 +143,29 @@ export default function ProjectsPage() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = React.useState(false);
   const [bulkDeleting, setBulkDeleting] = React.useState(false);
 
+  // Edit project dialog
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [projectToEdit, setProjectToEdit] = React.useState<Project | null>(null);
+  const [editing, setEditing] = React.useState(false);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<'all' | Project['status']>('all');
+  const [typeFilter, setTypeFilter] = React.useState<'all' | 'Product' | 'Project'>('all');
+  
+  const [editProject, setEditProject] = React.useState({
+    name: '',
+    clientName: '',
+    description: '',
+    githubRepo: '',
+    techStack: '',
+    status: 'OnTrack' as Project['status'],
+    progress: 0,
+    projectType: 'Project' as 'Product' | 'Project',
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
+  });
+
   const [newProject, setNewProject] = React.useState({
     name: '',
     clientName: '',
@@ -148,6 +173,7 @@ export default function ProjectsPage() {
     githubRepo: '',
     techStack: '',
     status: 'OnTrack' as Project['status'],
+    projectType: 'Project' as 'Product' | 'Project',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
   });
@@ -223,13 +249,77 @@ export default function ProjectsPage() {
       setCreateDialogOpen(false);
       setNewProject({
         name: '', clientName: '', description: '', githubRepo: '', techStack: '',
-        status: 'OnTrack', startDate: undefined, endDate: undefined,
+        status: 'OnTrack', projectType: 'Project', startDate: undefined, endDate: undefined,
       });
       toast({ title: 'Success', description: 'Project created successfully' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to create project', variant: 'destructive' });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEditDialog = (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    setProjectToEdit(project);
+    setEditProject({
+      name: project.name,
+      clientName: project.clientName || '',
+      description: project.description || '',
+      githubRepo: project.githubRepo || '',
+      techStack: project.techStack || '',
+      status: project.status,
+      progress: project.progress,
+      projectType: project.projectType || 'Project',
+      startDate: project.startDate ? new Date(project.startDate) : undefined,
+      endDate: project.endDate ? new Date(project.endDate) : undefined,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditProject = async () => {
+    if (!projectToEdit || !editProject.name) {
+      toast({ title: 'Error', description: 'Project name is required', variant: 'destructive' });
+      return;
+    }
+    
+    setEditing(true);
+    try {
+      const res = await fetch(`/api/projects/${projectToEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editProject,
+          startDate: editProject.startDate?.toISOString(),
+          endDate: editProject.endDate?.toISOString(),
+        }),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update project');
+      }
+      
+      await res.json();
+      await fetchProjects(); // Refresh all projects
+      
+      // Update selected project if it's the one being edited
+      if (selectedProject?.id === projectToEdit.id) {
+        setSelectedProject(null);
+      }
+      
+      setEditDialogOpen(false);
+      setProjectToEdit(null);
+      toast({ title: 'Success', description: 'Project updated successfully' });
+    } catch (error: any) {
+      console.error('Error updating project:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to update project', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -415,12 +505,32 @@ export default function ProjectsPage() {
   };
 
   const selectAllProjects = () => {
-    if (selectedProjects.size === projects.length) {
+    if (selectedProjects.size === filteredProjects.length) {
       setSelectedProjects(new Set());
     } else {
-      setSelectedProjects(new Set(projects.map(p => p.id)));
+      setSelectedProjects(new Set(filteredProjects.map(p => p.id)));
     }
   };
+
+  // Filter and search logic
+  const filteredProjects = React.useMemo(() => {
+    return projects.filter((project) => {
+      // Search filter
+      const matchesSearch = searchQuery === '' || 
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.techStack?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
+
+      // Type filter
+      const matchesType = typeFilter === 'all' || project.projectType === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [projects, searchQuery, statusFilter, typeFilter]);
 
   if (loading) {
     return (
@@ -452,17 +562,77 @@ export default function ProjectsPage() {
         </div>
       </PageHeader>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex-1">
+          <Input
+            placeholder="Search projects by name, client, description, or tech stack..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={typeFilter} onValueChange={(value: 'all' | 'Product' | 'Project') => setTypeFilter(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Product">Product</SelectItem>
+              <SelectItem value="Project">Project</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(value: 'all' | Project['status']) => setStatusFilter(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="OnTrack">On Track</SelectItem>
+              <SelectItem value="AtRisk">At Risk</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+          {(searchQuery || typeFilter !== 'all' || statusFilter !== 'all') && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('');
+                setTypeFilter('all');
+                setStatusFilter('all');
+              }}
+              className="whitespace-nowrap"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Results Counter */}
+      {(searchQuery || typeFilter !== 'all' || statusFilter !== 'all') && (
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredProjects.length} of {projects.length} projects
+            {searchQuery && ` matching "${searchQuery}"`}
+            {typeFilter !== 'all' && ` • Type: ${typeFilter}`}
+            {statusFilter !== 'all' && ` • Status: ${statusFilter}`}
+          </p>
+        </div>
+      )}
+
       {/* Bulk Selection Controls */}
-      {projects.length > 0 && (
+      {filteredProjects.length > 0 && (
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="select-all"
-              checked={selectedProjects.size === projects.length}
+              checked={selectedProjects.size === filteredProjects.length && filteredProjects.length > 0}
               onCheckedChange={selectAllProjects}
             />
             <label htmlFor="select-all" className="text-sm font-medium">
-              Select All ({projects.length} projects)
+              Select All ({filteredProjects.length} projects)
             </label>
           </div>
           {selectedProjects.size > 0 && (
@@ -475,7 +645,7 @@ export default function ProjectsPage() {
 
       {/* Projects Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.isArray(projects) && projects.length > 0 ? projects.map((project) => {
+        {Array.isArray(filteredProjects) && filteredProjects.length > 0 ? filteredProjects.map((project) => {
           const StatusIcon = statusConfig[project?.status || 'OnTrack']?.icon || statusConfig.OnTrack.icon;
           return (
             <Card key={project?.id} className={cn(
@@ -501,14 +671,29 @@ export default function ProjectsPage() {
                       <StatusIcon className="h-3 w-3 mr-1" />
                       {statusConfig[project?.status || 'OnTrack']?.label}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => openDeleteDialog(project, e)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {project?.projectType && (
+                      <Badge variant="secondary" className="text-xs">
+                        {project.projectType}
+                      </Badge>
+                    )}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={(e) => openEditDialog(project, e)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={(e) => openDeleteDialog(project, e)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -541,6 +726,27 @@ export default function ProjectsPage() {
           );
         }) : null}
       </div>
+
+      {/* Empty state for filtered results */}
+      {Array.isArray(projects) && projects.length > 0 && filteredProjects.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">No projects match your filters</h3>
+            <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filter criteria</p>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('');
+                setTypeFilter('all');
+                setStatusFilter('all');
+              }}
+            >
+              Clear All Filters
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {(!Array.isArray(projects) || projects.length === 0) && (
         <Card>
@@ -626,12 +832,156 @@ export default function ProjectsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2">
+              <Label>Project Type</Label>
+              <Select value={newProject.projectType} onValueChange={(v) => setNewProject({ ...newProject, projectType: v as 'Product' | 'Project' })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Project">Project</SelectItem>
+                  <SelectItem value="Product">Product</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateProject} disabled={creating}>
               {creating ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
               Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>Update project details and settings.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Project Name *</Label>
+              <Input 
+                id="edit-name" 
+                value={editProject.name} 
+                onChange={(e) => setEditProject({ ...editProject, name: e.target.value })} 
+                placeholder="Project name" 
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-clientName">Client Name</Label>
+              <Input 
+                id="edit-clientName" 
+                value={editProject.clientName} 
+                onChange={(e) => setEditProject({ ...editProject, clientName: e.target.value })} 
+                placeholder="Client or company name" 
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea 
+                id="edit-description" 
+                value={editProject.description} 
+                onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} 
+                placeholder="Project description" 
+                rows={3} 
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-githubRepo">GitHub Repository URL</Label>
+              <div className="flex gap-2">
+                <Github className="h-5 w-5 mt-2 text-muted-foreground" />
+                <Input 
+                  id="edit-githubRepo" 
+                  value={editProject.githubRepo} 
+                  onChange={(e) => setEditProject({ ...editProject, githubRepo: e.target.value })} 
+                  placeholder="https://github.com/username/repo" 
+                  className="flex-1" 
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-techStack">Tech Stack</Label>
+              <Input 
+                id="edit-techStack" 
+                value={editProject.techStack} 
+                onChange={(e) => setEditProject({ ...editProject, techStack: e.target.value })} 
+                placeholder="React, Node.js, PostgreSQL (comma separated)" 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-startDate">Start Date</Label>
+                <Input
+                  id="edit-startDate"
+                  type="date"
+                  value={editProject.startDate ? format(editProject.startDate, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setEditProject({ ...editProject, startDate: date });
+                  }}
+                  className="w-full"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-endDate">End Date</Label>
+                <Input
+                  id="edit-endDate"
+                  type="date"
+                  value={editProject.endDate ? format(editProject.endDate, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setEditProject({ ...editProject, endDate: date });
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Project Status</Label>
+                <Select value={editProject.status} onValueChange={(v) => setEditProject({ ...editProject, status: v as Project['status'] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OnTrack">On Track</SelectItem>
+                    <SelectItem value="AtRisk">At Risk</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Project Type</Label>
+                <Select value={editProject.projectType} onValueChange={(v) => setEditProject({ ...editProject, projectType: v as 'Product' | 'Project' })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Project">Project</SelectItem>
+                    <SelectItem value="Product">Product</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-progress">Progress (%)</Label>
+              <Input
+                id="edit-progress"
+                type="number"
+                min="0"
+                max="100"
+                value={editProject.progress}
+                onChange={(e) => setEditProject({ ...editProject, progress: parseInt(e.target.value) || 0 })}
+                placeholder="0-100"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={editing}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditProject} disabled={editing}>
+              {editing ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+              Update Project
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -656,6 +1006,11 @@ export default function ProjectsPage() {
                   <Badge variant="outline" className={cn('text-xs', statusConfig[selectedProject.status].color)}>
                     {statusConfig[selectedProject.status].label}
                   </Badge>
+                  {selectedProject.projectType && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedProject.projectType}
+                    </Badge>
+                  )}
                   {selectedProject.techStack && (
                     <div className="flex gap-1 flex-wrap">
                       {selectedProject.techStack.split(',').map((tech, i) => (
