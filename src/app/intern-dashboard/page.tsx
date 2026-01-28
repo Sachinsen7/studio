@@ -8,7 +8,7 @@ import {
     CardTitle,
     CardDescription,
 } from '@/components/ui/card';
-import { ListTodo, CheckCircle2, Award, ArrowUpRight, FolderKanban, Clock, LoaderCircle } from 'lucide-react';
+import { ListTodo, CheckCircle2, Award, Clock, LoaderCircle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,11 +51,9 @@ export default function InternDashboardPage() {
     const { user } = useAuth();
     const [currentTime, setCurrentTime] = React.useState(new Date());
     const [loading, setLoading] = React.useState(true);
-    const [internId, setInternId] = React.useState<string | null>(null);
     const [myTasks, setMyTasks] = React.useState<Task[]>([]);
     const [myEvaluations, setMyEvaluations] = React.useState<Evaluation[]>([]);
     const [myProjects, setMyProjects] = React.useState<Project[]>([]);
-    const [internData, setInternData] = React.useState<any>(null);
 
     // Update clock every second
     React.useEffect(() => {
@@ -80,11 +78,8 @@ export default function InternDashboardPage() {
                 const currentIntern = Array.isArray(interns) ? interns.find((i: any) => i.email === user.email) : null;
 
                 if (currentIntern?.id) {
-                    setInternId(currentIntern.id);
-                    setInternData(currentIntern);
-
                     // Fetch tasks
-                    const tasksRes = await fetch(`/api/tasks?internId=${currentIntern.id}`);
+                    const tasksRes = await fetch(`/api/tasks?assigneeId=${currentIntern.id}&assigneeType=Intern`);
                     if (tasksRes.ok) {
                         const tasksData = await tasksRes.json();
                         setMyTasks(Array.isArray(tasksData) ? tasksData : []);
@@ -102,11 +97,21 @@ export default function InternDashboardPage() {
                     if (projectsRes.ok) {
                         const allProjects = await projectsRes.json();
                         if (Array.isArray(allProjects)) {
-                            const internProjects = allProjects.filter((p: Project) =>
-                                p.name === currentIntern.project ||
-                                (currentIntern.projects && JSON.parse(currentIntern.projects || '[]').includes(p.name))
+                            let internProjects: string[] = [];
+                            if (currentIntern.projects) {
+                                try {
+                                    internProjects = JSON.parse(currentIntern.projects);
+                                } catch {
+                                    internProjects = [currentIntern.project];
+                                }
+                            } else if (currentIntern.project && currentIntern.project !== 'Unassigned') {
+                                internProjects = [currentIntern.project];
+                            }
+                            
+                            const filteredProjects = allProjects.filter((p: Project) =>
+                                internProjects.includes(p.name)
                             );
-                            setMyProjects(internProjects);
+                            setMyProjects(filteredProjects);
                         }
                     }
                 }
@@ -179,7 +184,6 @@ export default function InternDashboardPage() {
                         <p className="text-xs text-muted-foreground">Keep up the great work</p>
                     </CardContent>
                     <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-                        <ArrowUpRight className="h-4 w-4" />
                     </Button>
                 </Card>
                 <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -192,7 +196,6 @@ export default function InternDashboardPage() {
                         <p className="text-xs text-muted-foreground">Total completed</p>
                     </CardContent>
                     <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-                        <ArrowUpRight className="h-4 w-4" />
                     </Button>
                 </Card>
                 <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -205,7 +208,6 @@ export default function InternDashboardPage() {
                         <p className="text-xs text-muted-foreground">Out of 5.0</p>
                     </CardContent>
                     <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-                        <ArrowUpRight className="h-4 w-4" />
                     </Button>
                 </Card>
             </div>

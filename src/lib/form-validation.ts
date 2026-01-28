@@ -64,14 +64,8 @@ export const commonValidations = {
       message: 'Please enter a valid URL (e.g., https://example.com)',
     }),
     
-  adrsId: z.string()
-    .optional()
-    .refine((val) => {
-      if (!val || val.trim() === '') return true;
-      return adrsIdRegex.test(val);
-    }, {
-      message: 'ADRS ID should be 3-10 characters with uppercase letters and numbers only (e.g., ADRS001)',
-    }),
+ adrsId: z.string().optional(),
+
     
   positiveNumber: z.string()
     .optional()

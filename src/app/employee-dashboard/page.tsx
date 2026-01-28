@@ -7,7 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import { ListTodo, CheckCircle2, CalendarCheck, ArrowUpRight, FolderKanban, Clock, LoaderCircle } from 'lucide-react';
+import { ListTodo, CheckCircle2, CalendarCheck, FolderKanban, Clock, LoaderCircle } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -49,7 +49,6 @@ export default function EmployeeDashboardPage() {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = React.useState(new Date());
   const [loading, setLoading] = React.useState(true);
-  const [employeeId, setEmployeeId] = React.useState<string | null>(null);
   const [myTasks, setMyTasks] = React.useState<Task[]>([]);
   const [myLeaveRequests, setMyLeaveRequests] = React.useState<LeaveRequest[]>([]);
   const [myProjects, setMyProjects] = React.useState<Project[]>([]);
@@ -73,47 +72,27 @@ export default function EmployeeDashboardPage() {
           return;
         }
 
-        const currentEmployee = await empRes.json();
+        const empData = await empRes.json();
+        const currentEmployee = empData.employee; // Extract employee from nested object
         console.log('Current employee:', currentEmployee);
 
         if (currentEmployee?.id) {
-          setEmployeeId(currentEmployee.id);
-
-          // Fetch leave requests and projects in parallel
-          const [leavesRes, projectsRes] = await Promise.all([
-            fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`),
-            fetch('/api/projects')
+          // Fetch tasks and leave requests
+          const [tasksRes, leavesRes] = await Promise.all([
+            fetch(`/api/tasks?assigneeId=${currentEmployee.id}&assigneeType=Employee`),
+            fetch(`/api/leave-requests?employeeId=${currentEmployee.id}`)
           ]);
 
-          // Process tasks from employee data (already included)
-          const tasks = Array.isArray(currentEmployee.tasks) ? currentEmployee.tasks : [];
-          setMyTasks(tasks);
-
-          // Process projects - show both projects from tasks AND the assigned project
-          if (projectsRes.ok) {
-            const allProjects = await projectsRes.json();
-            if (Array.isArray(allProjects)) {
-              // Get project IDs from tasks
-              const projectIdsFromTasks = [...new Set(tasks.map((t: Task) => t?.projectId).filter(Boolean))];
-
-              console.log('Employee project:', currentEmployee.project);
-              console.log('All projects:', allProjects.map(p => ({ id: p.id, name: p.name })));
-              console.log('Project IDs from tasks:', projectIdsFromTasks);
-
-              // Filter projects: either from tasks OR matching employee's assigned project name
-              const employeeProjects = allProjects.filter((p: Project) => {
-                if (!p?.id) return false;
-                // Include if project ID matches task projectId
-                if (projectIdsFromTasks.includes(p.id)) return true;
-                // Include if project name matches employee's assigned project
-                if (currentEmployee.project && p.name === currentEmployee.project) return true;
-                return false;
-              });
-
-              console.log('Filtered employee projects:', employeeProjects.map(p => ({ id: p.id, name: p.name })));
-              setMyProjects(employeeProjects);
-            }
+          // Process tasks
+          if (tasksRes.ok) {
+            const tasksData = await tasksRes.json();
+            setMyTasks(Array.isArray(tasksData) ? tasksData : []);
           }
+
+          // Process projects from empData (already included from /me endpoint)
+          const projectsFromEmployee = empData.projects || [];
+          console.log('Projects from employee:', projectsFromEmployee);
+          setMyProjects(Array.isArray(projectsFromEmployee) ? projectsFromEmployee : []);
 
           // Process leave requests
           if (leavesRes.ok) {

@@ -41,6 +41,7 @@ import {
     FolderKanban,
     Award,
     KeyRound,
+    ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -50,6 +51,7 @@ import { NotificationsPanel } from '@/components/notifications-panel';
 
 const internNavItems = [
     { href: '/intern-dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { href: '/intern-dashboard/my-attendance', label: 'My Attendance', icon: ClipboardCheck },
     { href: '/intern-dashboard/my-projects', label: 'My Projects', icon: FolderKanban },
     { href: '/intern-dashboard/tasks', label: 'My Tasks', icon: ListTodo },
     { href: '/intern-dashboard/daily-logs', label: 'Daily Logs', icon: Clock },
