@@ -190,7 +190,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">Keep up the great work</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -203,7 +202,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -216,7 +214,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">Total requests submitted</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -229,7 +226,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">{enrollmentStatus}</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
       </div>
@@ -294,7 +290,7 @@ export default function EmployeeDashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 mt-6">
+      {/* <div className="grid gap-6 md:grid-cols-2 mt-6">
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tasks In Progress</CardTitle>
@@ -305,7 +301,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">Keep up the great work</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -318,7 +313,6 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
         <Card className="relative transition-all hover:shadow-lg hover:-translate-y-1">
@@ -331,10 +325,9 @@ export default function EmployeeDashboardPage() {
             <p className="text-xs text-muted-foreground">Total requests submitted</p>
           </CardContent>
           <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
-            <ArrowUpRight className="h-4 w-4" />
           </Button>
         </Card>
-      </div>
+      </div> */}
       <div className="grid gap-6 md:grid-cols-2 mt-6">
         <Card>
           <CardHeader>
