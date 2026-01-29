@@ -133,7 +133,7 @@ export default function EmployeesPage() {
   const fetchData = React.useCallback(async () => {
     try {
       const [empRes, projRes] = await Promise.all([
-        fetch('/api/employees'),
+        fetch('/api/employees?active=true'), // Only fetch active employees
         fetch('/api/projects'),
       ]);
       const empData = await empRes.json();

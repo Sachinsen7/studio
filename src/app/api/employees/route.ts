@@ -3,10 +3,19 @@ import { db, withRetry } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 
 // GET all employees
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url);
+        const activeOnly = searchParams.get('active');
+        
+        let whereClause = {};
+        if (activeOnly === 'true') {
+            whereClause = { isActive: true };
+        }
+
         const employees = await withRetry(async () => {
             return await db.employee.findMany({
+                where: whereClause,
                 orderBy: { enrollmentDate: 'desc' },
             });
         });

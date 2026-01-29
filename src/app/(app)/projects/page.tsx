@@ -363,7 +363,7 @@ export default function ProjectsPage() {
     setAddingLog(true);
     try {
       // For admin, we'll use a placeholder employee ID - in real app, get from auth
-      const empRes = await fetch('/api/employees');
+      const empRes = await fetch('/api/employees?active=true'); // Only fetch active employees
       const employees = await empRes.json();
       const employeesArray = Array.isArray(employees) ? employees : [];
       const adminEmployee = employeesArray[0]; // Use first employee as placeholder

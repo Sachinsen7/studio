@@ -92,6 +92,7 @@ type Employee = {
     name: string;
     email: string;
     role: string;
+    isActive?: boolean;
 };
 
 type Project = {
@@ -171,7 +172,7 @@ export default function InternsPage() {
         try {
             const [internsRes, employeesRes, projectsRes] = await Promise.all([
                 fetch('/api/interns'),
-                fetch('/api/employees'),
+                fetch('/api/employees?active=true'), // Only fetch active employees for mentor selection
                 fetch('/api/projects'),
             ]);
             const internsData = await internsRes.json();
@@ -757,7 +758,12 @@ export default function InternsPage() {
             </Dialog>
 
             {/* Edit Intern Dialog */}
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <Dialog open={editDialogOpen} onOpenChange={(open) => {
+                setEditDialogOpen(open);
+                if (!open) {
+                    editForm.reset();
+                }
+            }}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Edit Intern</DialogTitle>
@@ -766,6 +772,35 @@ export default function InternsPage() {
                     <Form {...editForm}>
                         <form onSubmit={editForm.handleSubmit(handleUpdateIntern)} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={editForm.control}
+                                    name="avatarUrl"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Profile Image</FormLabel>
+                                            <FormControl>
+                                                <div className="flex items-center gap-4">
+                                                    <Avatar className="h-20 w-20">
+                                                        <AvatarImage src={selectedIntern?.avatarUrl || field.value || undefined} />
+                                                        <AvatarFallback><ImagePlus className="h-8 w-8 text-muted-foreground" /></AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1">
+                                                        <Input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) handleImageUpload(file, 'edit');
+                                                            }}
+                                                            disabled={uploadingImage}
+                                                        />
+                                                        {uploadingImage && <p className="text-xs text-muted-foreground mt-1">Uploading...</p>}
+                                                    </div>
+                                                </div>
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
                                 <FormField control={editForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Name *</FormLabel>

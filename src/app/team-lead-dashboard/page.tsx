@@ -62,7 +62,7 @@ export default function TeamLeadDashboardPage() {
         setMyProjects(projects);
 
         // Fetch all employees to find team members
-        const allEmpRes = await fetch('/api/employees');
+        const allEmpRes = await fetch('/api/employees?active=true'); // Only fetch active employees
         const allEmployees = await allEmpRes.json();
 
         // Filter team members (employees in the same projects, excluding self and inactive)

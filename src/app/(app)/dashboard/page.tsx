@@ -77,7 +77,7 @@ export default function DashboardPage() {
         const [statsRes, projectsRes, employeesRes] = await Promise.all([
           fetch('/api/dashboard/stats'),
           fetch('/api/projects'),
-          fetch('/api/employees'),
+          fetch('/api/employees?active=true'), // Only fetch active employees
         ]);
 
         const statsData = await statsRes.json();

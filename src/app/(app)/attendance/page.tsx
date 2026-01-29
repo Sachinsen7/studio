@@ -93,7 +93,7 @@ export default function AttendancePage() {
   React.useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const response = await fetch('/api/employees');
+        const response = await fetch('/api/employees?active=true'); // Only fetch active employees
         if (response.ok) {
           const data = await response.json();
           setAllEmployees(Array.isArray(data) ? data : []);

@@ -60,7 +60,7 @@ export default function MyTeamPage() {
         setMyProjects(projects);
 
         // Fetch all employees
-        const allEmpRes = await fetch('/api/employees');
+        const allEmpRes = await fetch('/api/employees?active=true'); // Only fetch active employees
         const allEmployees = await allEmpRes.json();
 
         // Filter team members

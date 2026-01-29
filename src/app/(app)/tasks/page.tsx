@@ -242,7 +242,7 @@ export default function TasksPage() {
     try {
       const [tasksRes, employeesRes, internsRes, projectsRes] = await Promise.all([
         fetch('/api/tasks'),
-        fetch('/api/employees'),
+        fetch('/api/employees?active=true'), // Only fetch active employees
         fetch('/api/interns'),
         fetch('/api/projects'),
       ]);
@@ -254,11 +254,8 @@ export default function TasksPage() {
 
       setTasks(Array.isArray(tasksData) ? tasksData : []);
       
-      // Filter only active employees
-      const activeEmployees = Array.isArray(employeesData)
-        ? employeesData.filter((emp: any) => emp.isActive !== false)
-        : [];
-      setEmployees(activeEmployees);
+      // Employees are already filtered as active from API
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
       
       // Filter only active interns
       const activeInterns = Array.isArray(internsData)
@@ -268,7 +265,7 @@ export default function TasksPage() {
       
       // Combine employees and interns into team members
       const combinedTeamMembers: TeamMember[] = [
-        ...activeEmployees.map((emp: any) => ({
+        ...employeesData.map((emp: any) => ({
           id: emp.id,
           name: emp.name,
           email: emp.email,

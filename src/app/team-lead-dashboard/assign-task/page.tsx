@@ -87,7 +87,7 @@ export default function AssignTaskPage() {
         setMyProjects(myProjectsList);
 
         // Fetch all active employees
-        const allEmpRes = await fetch('/api/employees');
+        const allEmpRes = await fetch('/api/employees?active=true'); // Only fetch active employees
         const allEmployees = await allEmpRes.json();
         const activeEmployees = Array.isArray(allEmployees)
           ? allEmployees.filter((emp: any) => emp.isActive !== false && emp.id !== currentEmployee.id)
