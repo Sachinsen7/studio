@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Admin User - ADRS Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Setup Admin User</h1>
+            <p class="text-gray-600">Create the initial admin account for ADRS Studio</p>
+        </div>
+
+        <form id="adminForm" class="space-y-6">
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="John Doe"
+                >
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                </label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="admin@adrs.com"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                </label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required
+                    minlength="6"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Minimum 6 characters"
+                >
+            </div>
+
+            <div>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password
+                </label>
+                <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    name="confirmPassword" 
+                    required
+                    minlength="6"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Re-enter password"
+                >
+            </div>
+
+            <button 
+                type="submit" 
+                id="submitBtn"
+                class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+                Create Admin Account
+            </button>
+        </form>
+
+        <div id="message" class="mt-6 hidden">
+            <div class="p-4 rounded-lg" id="messageContent"></div>
+            <button 
+                id="retryBtn"
+                class="mt-3 w-full bg-gray-600 text-white py-2 rounded-lg font-semibold hover:bg-gray-700 transition-colors hidden"
+                onclick="location.reload()"
+            >
+                Retry
+            </button>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="/login" class="text-blue-600 hover:text-blue-700 text-sm">
+                Already have an account? Login here
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('adminForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const message = document.getElementById('message');
+        const messageContent = document.getElementById('messageContent');
+        const retryBtn = document.getElementById('retryBtn');
+
+        function showMessage(text, type = 'success') {
+            message.classList.remove('hidden');
+            messageContent.textContent = text;
+            
+            if (type === 'success') {
+                messageContent.className = 'p-4 rounded-lg bg-green-100 text-green-800 border border-green-200';
+                retryBtn.classList.add('hidden');
+            } else if (type === 'timeout') {
+                messageContent.className = 'p-4 rounded-lg bg-yellow-100 text-yellow-800 border border-yellow-200';
+                retryBtn.classList.remove('hidden');
+            } else {
+                messageContent.className = 'p-4 rounded-lg bg-red-100 text-red-800 border border-red-200';
+                retryBtn.classList.remove('hidden');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match!', 'error');
+                return;
+            }
+
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Admin...';
+
+            try {
+                const response = await fetch('/api/setup/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Admin account created successfully! Redirecting to login...', 'success');
+                    form.reset();
+                    
+                    // Redirect to login after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else if (response.status === 503) {
+                    showMessage(data.error + ' The database connection is slow. Please wait a moment and try again.', 'timeout');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Admin Account';
+                } else {
+                    showMessage(data.error || 'Failed to create admin account', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Admin Account';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Network error or database timeout. Please check your connection and try again.', 'timeout');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Admin Account';
+            }
+        });
+
+        // Password strength indicator
+        const passwordInput = document.getElementById('password');
+        passwordInput.addEventListener('input', (e) => {
+            const password = e.target.value;
+            const strength = document.getElementById('passwordStrength');
+            
+            if (password.length < 6) {
+                passwordInput.classList.add('border-red-500');
+                passwordInput.classList.remove('border-green-500');
+            } else {
+                passwordInput.classList.remove('border-red-500');
+                passwordInput.classList.add('border-green-500');
+            }
+        });
+
+        // Confirm password validation
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        confirmPasswordInput.addEventListener('input', (e) => {
+            const password = document.getElementById('password').value;
+            const confirmPassword = e.target.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                confirmPasswordInput.classList.add('border-red-500');
+                confirmPasswordInput.classList.remove('border-green-500');
+            } else if (confirmPassword) {
+                confirmPasswordInput.classList.remove('border-red-500');
+                confirmPasswordInput.classList.add('border-green-500');
+            }
+        });
+    </script>
+</body>
+</html>

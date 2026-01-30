@@ -1,77 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { db, withRetry } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
-// POST /api/setup/admin - Create admin user (for setup purposes)
+// POST /api/setup/admin - Create initial admin user
 export async function POST(request: NextRequest) {
     try {
-        const { email = 'admin@adrs.com', password = 'Admin@123', name = 'Admin User' } = await request.json();
+        const body = await request.json();
+        const { name, email, password } = body;
 
-        // Check if admin already exists
-        const existingAdmin = await db.user.findUnique({
-            where: { email }
+        if (!name || !email || !password) {
+            return NextResponse.json(
+                { error: 'Name, email, and password are required' },
+                { status: 400 }
+            );
+        }
+
+        // Check if admin already exists (with retry)
+        const existingAdmin = await withRetry(async () => {
+            return await db.user.findFirst({
+                where: { role: 'admin' }
+            });
         });
 
         if (existingAdmin) {
-            return NextResponse.json({
-                message: 'Admin user already exists',
-                email: existingAdmin.email,
-                created: false
-            });
+            return NextResponse.json(
+                { error: 'Admin user already exists' },
+                { status: 400 }
+            );
         }
 
-        // Hash the password
-        const hashedPassword = await hashPassword(password);
+        // Check if email is already taken (with retry)
+        const existingUser = await withRetry(async () => {
+            return await db.user.findUnique({
+                where: { email }
+            });
+        });
 
-        // Create admin user
-        const adminUser = await db.user.create({
-            data: {
-                email,
-                name,
-                passwordHash: hashedPassword,
-                role: 'admin'
-            }
+        if (existingUser) {
+            return NextResponse.json(
+                { error: 'Email already in use' },
+                { status: 400 }
+            );
+        }
+
+        // Hash password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create admin user (with retry)
+        const admin = await withRetry(async () => {
+            return await db.user.create({
+                data: {
+                    name,
+                    email,
+                    passwordHash,
+                    role: 'admin'
+                }
+            });
         });
 
         return NextResponse.json({
             message: 'Admin user created successfully',
-            email: adminUser.email,
-            created: true,
-            credentials: {
-                email,
-                password
+            user: {
+                id: admin.id,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role
             }
         }, { status: 201 });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating admin user:', error);
-        return NextResponse.json({
-            error: 'Failed to create admin user',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
-    }
-}
-
-// GET /api/setup/admin - Check if admin exists
-export async function GET() {
-    try {
-        const adminCount = await db.user.count({
-            where: { role: 'admin' }
-        });
-
-        const hasAdmin = adminCount > 0;
-
-        return NextResponse.json({
-            hasAdmin,
-            adminCount,
-            message: hasAdmin ? 'Admin user exists' : 'No admin user found'
-        });
-
-    } catch (error) {
-        console.error('Error checking admin user:', error);
-        return NextResponse.json({
-            error: 'Failed to check admin user',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        
+        // Provide more specific error messages
+        if (error.message?.includes('timeout')) {
+            return NextResponse.json(
+                { error: 'Database connection timeout. Please try again.' },
+                { status: 503 }
+            );
+        }
+        
+        if (error.message?.includes('Connection terminated')) {
+            return NextResponse.json(
+                { error: 'Database connection lost. Please try again.' },
+                { status: 503 }
+            );
+        }
+        
+        return NextResponse.json(
+            { error: 'Failed to create admin user. Please try again.' },
+            { status: 500 }
+        );
     }
 }

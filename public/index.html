@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADRS Studio - Setup & Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">ADRS Studio</h1>
+            <p class="text-xl text-gray-600">Setup & Development Tools</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Setup Admin -->
+            <a href="/setup-admin.html" class="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow border-2 border-blue-500">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900">Setup Admin</h2>
+                </div>
+                <p class="text-gray-600">Create the initial admin user account for the system</p>
+                <div class="mt-4 text-blue-600 font-semibold">Get Started →</div>
+            </a>
+
+            <!-- Login -->
+            <a href="/login" class="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900">Login</h2>
+                </div>
+                <p class="text-gray-600">Sign in to your ADRS Studio account</p>
+                <div class="mt-4 text-green-600 font-semibold">Sign In →</div>
+            </a>
+
+            <!-- Dashboard -->
+            <a href="/dashboard" class="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                </div>
+                <p class="text-gray-600">Access the admin dashboard</p>
+                <div class="mt-4 text-purple-600 font-semibold">Go to Dashboard →</div>
+            </a>
+
+            <!-- API Health -->
+            <a href="/api/health" target="_blank" class="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900">API Health</h2>
+                </div>
+                <p class="text-gray-600">Check API and database connection status</p>
+                <div class="mt-4 text-orange-600 font-semibold">Check Status →</div>
+            </a>
+        </div>
+
+        <div class="mt-12 p-6 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 class="text-lg font-semibold text-blue-900 mb-2">📝 Quick Start Guide</h3>
+            <ol class="list-decimal list-inside space-y-2 text-blue-800">
+                <li>Click "Setup Admin" to create your first admin account</li>
+                <li>Use the admin credentials to login</li>
+                <li>Access the dashboard to manage employees, projects, and more</li>
+            </ol>
+        </div>
+
+        <div class="mt-8 text-center text-gray-500 text-sm">
+            <p>ADRS Studio - Employee Management System</p>
+            <p class="mt-2">Version 1.0.0</p>
+        </div>
+    </div>
+</body>
+</html>

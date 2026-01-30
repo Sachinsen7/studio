@@ -15,7 +15,11 @@ import {
   Settings,
   Trash2,
   MoreHorizontal,
-  ExternalLink
+  ExternalLink,
+  MessageSquare,
+  ThumbsUp,
+  Heart,
+  Smile
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +34,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNotifications, NotificationType, NotificationPriority } from '@/contexts/notification-context';
+import { NotificationReplyDialog } from '@/components/notification-reply-dialog';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
 export function NotificationsPanel() {
@@ -42,10 +48,43 @@ export function NotificationsPanel() {
     removeNotification,
     clearAll,
   } = useNotifications();
+  const { user } = useAuth();
 
   const [mounted, setMounted] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState<Date | null>(null);
   const [activeTab, setActiveTab] = React.useState('all');
+  const [replyDialogOpen, setReplyDialogOpen] = React.useState(false);
+  const [selectedNotification, setSelectedNotification] = React.useState<any>(null);
+
+  const quickEmojis = ['👍', '❤️', '😊'];
+
+  const handleQuickReaction = async (notificationId: string, emoji: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          userName: user.name,
+          reaction: emoji
+        })
+      });
+
+      if (response.ok) {
+        // Optionally refresh notifications or show success
+        console.log('Reaction added successfully');
+      }
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+  };
 
   React.useEffect(() => {
     setMounted(true);
@@ -132,6 +171,7 @@ export function NotificationsPanel() {
   }, [notifications]);
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
@@ -285,20 +325,50 @@ export function NotificationsPanel() {
                           <p className="text-xs text-muted-foreground">
                             {getTimeAgo(notification.timestamp)}
                           </p>
-                          {notification.actionUrl && (
+                          <div className="flex items-center gap-1">
+                            {/* Quick emoji reactions */}
+                            <div className="flex items-center gap-1 mr-2">
+                              {quickEmojis.map((emoji) => (
+                                <Button
+                                  key={emoji}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-accent"
+                                  onClick={(e) => handleQuickReaction(notification.id, emoji, e)}
+                                  title={`React with ${emoji}`}
+                                >
+                                  <span className="text-sm">{emoji}</span>
+                                </Button>
+                              ))}
+                            </div>
+                            {notification.actionUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs"
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Link href={notification.actionUrl}>
+                                  {notification.actionLabel || 'View'}
+                                  <ExternalLink className="h-3 w-3 ml-1" />
+                                </Link>
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-6 text-xs"
-                              asChild
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedNotification(notification);
+                                setReplyDialogOpen(true);
+                              }}
                             >
-                              <Link href={notification.actionUrl}>
-                                {notification.actionLabel || 'View'}
-                                <ExternalLink className="h-3 w-3 ml-1" />
-                              </Link>
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Reply
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
 
@@ -316,5 +386,15 @@ export function NotificationsPanel() {
         </Tabs>
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {/* Reply Dialog */}
+    {selectedNotification && (
+      <NotificationReplyDialog
+        open={replyDialogOpen}
+        onOpenChange={setReplyDialogOpen}
+        notification={selectedNotification}
+      />
+    )}
+    </>
   );
 }

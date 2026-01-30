@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Eye, Trash2, Users, CheckCircle, Clock, Filter } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Trash2, Users, CheckCircle, Clock, Filter, BarChart3, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { MessageStatsDialog } from './message-stats-dialog';
 
 interface BulkMessage {
   id: string;
@@ -21,6 +22,7 @@ interface BulkMessage {
   totalRecipients: number;
   deliveredCount: number;
   readCount: number;
+  replyCount?: number;
   status: string;
   sentAt: string | null;
   createdAt: string;
@@ -34,7 +36,8 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [selectedMessage, setSelectedMessage] = useState<BulkMessage | null>(null);
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [statsMessageId, setStatsMessageId] = useState<string>('');
   const { toast } = useToast();
 
   const filteredMessages = messages.filter(message => {
@@ -206,6 +209,7 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
                     <TableHead>Recipients</TableHead>
                     <TableHead>Delivery</TableHead>
                     <TableHead>Read Rate</TableHead>
+                    <TableHead>Replies</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
@@ -245,12 +249,22 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Eye className="h-4 w-4 text-blue-600" />
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
                           <span>{message.readCount}</span>
                           <span className="text-sm text-gray-500">
                             ({getReadRate(message)}%)
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {message.replyCount && message.replyCount > 0 ? (
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="h-4 w-4 text-purple-600" />
+                            <span>{message.replyCount}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(message.status)}</TableCell>
                       <TableCell>
@@ -263,53 +277,24 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedMessage(message)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>{selectedMessage?.title}</DialogTitle>
-                                <DialogDescription>
-                                  Message details and delivery statistics
-                                </DialogDescription>
-                              </DialogHeader>
-                              {selectedMessage && (
-                                <div className="space-y-4">
-                                  <div>
-                                    <h4 className="font-semibold mb-2">Message Content</h4>
-                                    <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">
-                                      {selectedMessage.message}
-                                    </p>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Details</h4>
-                                      <div className="space-y-2 text-sm">
-                                        <div>Type: {getPriorityBadge(selectedMessage.type)}</div>
-                                        <div>Priority: {getPriorityBadge(selectedMessage.priority)}</div>
-                                        <div>Status: {getStatusBadge(selectedMessage.status)}</div>
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <h4 className="font-semibold mb-2">Statistics</h4>
-                                      <div className="space-y-2 text-sm">
-                                        <div>Recipients: {selectedMessage.totalRecipients}</div>
-                                        <div>Delivered: {selectedMessage.deliveredCount} ({getDeliveryRate(selectedMessage)}%)</div>
-                                        <div>Read: {selectedMessage.readCount} ({getReadRate(selectedMessage)}%)</div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </DialogContent>
-                          </Dialog>
+                          <div className="relative">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setStatsMessageId(message.id);
+                                setStatsDialogOpen(true);
+                              }}
+                              title="View detailed statistics"
+                            >
+                              <BarChart3 className="h-4 w-4" />
+                            </Button>
+                            {message.replyCount && message.replyCount > 0 && (
+                              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                {message.replyCount}
+                              </div>
+                            )}
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -328,6 +313,13 @@ export function MessageHistory({ messages }: MessageHistoryProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Stats Dialog */}
+      <MessageStatsDialog
+        open={statsDialogOpen}
+        onOpenChange={setStatsDialogOpen}
+        messageId={statsMessageId}
+      />
     </div>
   );
 }

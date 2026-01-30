@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Send, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Send, Users, Clock, CheckCircle, XCircle, BarChart3, MessageSquare } from 'lucide-react';
 import { BulkMessageComposer } from '@/components/messages/bulk-message-composer';
 import { MessageHistory } from '@/components/messages/message-history';
+import { MessageStatsDialog } from '@/components/messages/message-stats-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface BulkMessage {
@@ -20,6 +21,7 @@ interface BulkMessage {
   totalRecipients: number;
   deliveredCount: number;
   readCount: number;
+  replyCount?: number;
   status: string;
   sentAt: string | null;
   createdAt: string;
@@ -29,6 +31,8 @@ export default function MessagesPage() {
   const [bulkMessages, setBulkMessages] = useState<BulkMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showComposer, setShowComposer] = useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [statsMessageId, setStatsMessageId] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -175,6 +179,24 @@ export default function MessagesPage() {
                       <div className="flex gap-2 ml-4">
                         {getStatusBadge(message.status)}
                         {getPriorityBadge(message.priority)}
+                        <div className="relative">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setStatsMessageId(message.id);
+                              setStatsDialogOpen(true);
+                            }}
+                            title="View detailed statistics"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </Button>
+                          {message.replyCount && message.replyCount > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                              {message.replyCount}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
@@ -193,6 +215,12 @@ export default function MessagesPage() {
                           <CheckCircle className="h-4 w-4 text-blue-600" />
                           <span>{message.readCount} read</span>
                         </div>
+                        {message.replyCount && message.replyCount > 0 && (
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="h-4 w-4 text-purple-600" />
+                            <span>{message.replyCount} {message.replyCount === 1 ? 'reply' : 'replies'}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
@@ -215,6 +243,13 @@ export default function MessagesPage() {
           <MessageHistory messages={bulkMessages} />
         </TabsContent>
       </Tabs>
+
+      {/* Stats Dialog */}
+      <MessageStatsDialog
+        open={statsDialogOpen}
+        onOpenChange={setStatsDialogOpen}
+        messageId={statsMessageId}
+      />
     </div>
   );
 }
