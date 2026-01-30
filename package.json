@@ -1,6 +1,8 @@
 {
   "name": "nextn",
   "version": "0.1.0",
+  "description": "ADRS Studio Desktop Application - Employee Management System",
+  "author": "ADRS Studio",
   "private": true,
   "main": "main.js",
   "homepage": "./",
@@ -106,18 +108,11 @@
       "main.js",
       "preload.js",
       "electron.config.js",
-      "assets/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "assets",
-        "to": "assets"
-      }
-    ],
+    "extraResources": [],
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "assets/icon.png",
       "target": [
         {
           "target": "dmg",
@@ -129,7 +124,6 @@
       ]
     },
     "win": {
-      "icon": "assets/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -140,7 +134,6 @@
       ]
     },
     "linux": {
-      "icon": "assets/icon.png",
       "category": "Office",
       "target": [
         {
