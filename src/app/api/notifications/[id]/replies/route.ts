@@ -4,11 +4,12 @@ import { db } from '@/lib/db';
 // GET /api/notifications/[id]/replies - Get replies for a notification
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const replies = await db.notificationReply.findMany({
-            where: { notificationId: params.id },
+            where: { notificationId: id },
             orderBy: { createdAt: 'asc' }
         });
 
@@ -25,9 +26,10 @@ export async function GET(
 // POST /api/notifications/[id]/replies - Add a reply to a notification
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const { userId, userName, userRole, message } = await request.json();
 
         if (!userId || !userName || !userRole || !message?.trim()) {
@@ -39,7 +41,7 @@ export async function POST(
 
         const reply = await db.notificationReply.create({
             data: {
-                notificationId: params.id,
+                notificationId: id,
                 userId,
                 userName,
                 userRole,
@@ -60,9 +62,10 @@ export async function POST(
 // DELETE /api/notifications/[id]/replies - Delete a reply
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const { searchParams } = new URL(request.url);
         const replyId = searchParams.get('replyId');
         const userId = searchParams.get('userId');
@@ -78,7 +81,7 @@ export async function DELETE(
         const reply = await db.notificationReply.findFirst({
             where: {
                 id: replyId,
-                notificationId: params.id,
+                notificationId: id,
                 userId
             }
         });

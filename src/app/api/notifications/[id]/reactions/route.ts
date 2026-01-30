@@ -4,11 +4,12 @@ import { db } from '@/lib/db';
 // GET /api/notifications/[id]/reactions - Get reactions for a notification
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const reactions = await db.notificationReaction.findMany({
-            where: { notificationId: params.id },
+            where: { notificationId: id },
             orderBy: { createdAt: 'desc' }
         });
 
@@ -38,9 +39,10 @@ export async function GET(
 // POST /api/notifications/[id]/reactions - Add or toggle a reaction
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const { userId, userName, reaction } = await request.json();
 
         if (!userId || !userName || !reaction) {
@@ -54,7 +56,7 @@ export async function POST(
         const existingReaction = await db.notificationReaction.findUnique({
             where: {
                 notificationId_userId_reaction: {
-                    notificationId: params.id,
+                    notificationId: id,
                     userId,
                     reaction
                 }
@@ -71,7 +73,7 @@ export async function POST(
             // Add the reaction
             const newReaction = await db.notificationReaction.create({
                 data: {
-                    notificationId: params.id,
+                    notificationId: id,
                     userId,
                     userName,
                     reaction
