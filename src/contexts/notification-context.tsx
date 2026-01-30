@@ -45,11 +45,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = React.useState(false);
 
   const fetchNotifications = React.useCallback(async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/notifications?userId=${user.uid}`);
+      const response = await fetch(`/api/notifications?userId=${user.id}`);
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.map((n: any) => ({
@@ -63,7 +63,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -82,13 +82,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   const markAllAsRead = async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     try {
       const response = await fetch(`/api/notifications/mark-all-read`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid }),
+        body: JSON.stringify({ userId: user.id }),
       });
       
       if (response.ok) {
@@ -114,7 +114,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   const addNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'userId'>) => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     try {
       const response = await fetch('/api/notifications', {
@@ -122,7 +122,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...notification,
-          userId: user.uid,
+          userId: user.id,
         }),
       });
       
@@ -151,13 +151,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   const clearAll = async () => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     try {
       const response = await fetch(`/api/notifications/clear-all`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid }),
+        body: JSON.stringify({ userId: user.id }),
       });
       
       if (response.ok) {
@@ -175,11 +175,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Poll for new notifications every 30 seconds
   React.useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications, user?.uid]);
+  }, [fetchNotifications, user?.id]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

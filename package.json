@@ -100,7 +100,7 @@
   },
   "build": {
     "appId": "com.nextn.app",
-    "productName": "NextN",
+    "productName": "ADRS Studio",
     "directories": {
       "output": "dist"
     },
@@ -124,6 +124,7 @@
       ]
     },
     "win": {
+      "icon": "assets/icon.ico",
       "target": [
         {
           "target": "nsis",
