@@ -1,0 +1,24 @@
+# App Icon Placeholder
+
+Replace this file with your actual app icon:
+
+## Requirements:
+- **Format**: PNG with transparency support
+- **Size**: 512x512 pixels (recommended)
+- **Name**: Keep as `icon.png`
+
+## Platform Usage:
+- **Windows**: Used for executable and installer
+- **macOS**: Used for app bundle and DMG
+- **Linux**: Used for AppImage and desktop entry
+
+## Icon Guidelines:
+- Use simple, recognizable design
+- Ensure good contrast at small sizes
+- Test visibility on both light and dark backgrounds
+- Consider platform-specific design conventions
+
+To replace this placeholder:
+1. Save your icon as `assets/icon.png`
+2. Ensure it's 512x512 pixels
+3. Rebuild the Electron app: `npm run electron:build`

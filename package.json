@@ -2,15 +2,25 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
+  "homepage": "./",
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
+    "next:start": "next start",
+    "electron": "electron .",
+    "electron:test": "electron test-electron.js",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:9002 && electron .\"",
+    "electron:pack": "electron-builder --dir",
+    "electron:dist": "electron-builder",
+    "electron:build": "npm run build:electron && npm run electron:dist",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed:employees": "tsx scripts/seed-employees.ts",
-    "build": "prisma generate && next build"
+    "build": "prisma generate && next build",
+    "build:electron": "echo Using Vercel deployment - no build needed"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
@@ -75,11 +85,77 @@
     "@types/node": "^20",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
+    "concurrently": "^9.2.1",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.4.0",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
     "prisma": "^7.2.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.7.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.nextn.app",
+    "productName": "NextN",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "electron.config.js",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Office",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

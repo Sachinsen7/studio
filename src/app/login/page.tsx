@@ -71,15 +71,18 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="absolute top-8 left-8 flex items-center gap-2 text-lg font-semibold">
-        <Logo className="h-6 w-auto" />
+        <Logo className="h-7 w-auto" />
       </div>
       <div className="absolute top-8 right-8">
         <ThemeToggle />
       </div>
       <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center pb-6">
+          <div className="flex justify-center mb-6">
+              <Logo className="h-16 w-auto" />
+          </div>
           <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base mt-2">
             Sign in to access your dashboard.
           </CardDescription>
         </CardHeader>

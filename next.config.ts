@@ -1,5 +1,7 @@
 import type {NextConfig} from 'next';
 
+const isElectronBuild = process.env.ELECTRON_BUILD === 'true';
+
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
@@ -8,7 +10,16 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Only use static export for Electron builds
+  ...(isElectronBuild && {
+    output: 'export',
+    trailingSlash: true,
+    distDir: 'out',
+    basePath: '',
+    assetPrefix: '',
+  }),
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
